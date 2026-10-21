@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ecuación del calor · EPRIMA 2026</title>
+<meta name="description" content="Material complementario del cursillo de Análisis Numérico de EDP (EPRIMA 2026, UBB): ecuación del calor con Euler implícito y elementos finitos: teoría con demostraciones y laboratorio FreeFEM.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&family=Fira+Mono:wght@400;500&family=Montserrat:ital,wght@1,900&family=Barlow+Condensed:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/computer-modern@0.1.2/cmu-serif.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+  /* ------------------------------------------------------------------
+     Paleta y tipografía (idénticas a la guía en LaTeX)
+     ------------------------------------------------------------------ */
+  :root {
+    --navy: #1B3A57;
+    --amarillo: #EAD900;   /* amarillo del logo EPRIMA */
+    --acero: #3D7AA8;
+    --pizarra: #50677D;
+    --gristexto: #5E6A75;
+    --grislinea: #C9D1D9;
+    --fondo: #F3F5F8;
+    --comentario: #7A8590;
+    --cadena: #8A5A2B;
+    --texto: #1d232a;
+    --papel: #ffffff;
+    --serif: "CMU Serif", "Latin Modern Roman", Georgia, serif;
+    --sans: "Fira Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "Fira Mono", Consolas, "Courier New", monospace;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { overflow-x: clip; }   /* nada desborda el ancho de la pantalla en moviles */
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    background: var(--papel);
+    color: var(--texto);
+    font-family: var(--serif);
+    font-size: 17.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--acero); }
+  img { max-width: 100%; }
+
+  /* Banda superior fija (como el encabezado del PDF) */
+  .banda {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--navy);
+    color: #fff;
+  }
+  .banda-in {
+    max-width: 1180px; margin: 0 auto; padding: 0 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 46px; font-family: var(--sans); font-weight: 600; font-size: 13px;
+    letter-spacing: .04em;
+  }
+  .banda-in .marca { color: #fff; text-decoration: none; }
+  .banda-in nav { display: flex; gap: 22px; }
+  .banda-in nav a { color: #cfe0ee; text-decoration: none; }
+  .banda-in nav a:hover { color: #fff; }
+  .banda::after {
+    content: ""; display: block; height: 4px; width: 150px;
+    background: var(--acero); margin-left: max(16px, calc((100vw - 1180px) / 2 + 16px));
+  }
+
+  /* Portada */
+  /* Banner del evento hecho en HTML/CSS: texto y fórmulas vectoriales, nítido en cualquier resolución */
+  .hero-banner {
+    position: relative; overflow: hidden; text-align: center; color: #fff; user-select: none;
+    background-color: var(--navy);
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    padding: clamp(20px, 3.4vw, 50px) 16px clamp(18px, 2.8vw, 42px);
+  }
+  .hb-formulas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .hb-formulas text { fill: rgba(255,255,255,.085); font-family: "CMU Serif", Georgia, serif; font-style: italic; }
+  .hb-formulas line { stroke: rgba(255,255,255,.085); stroke-width: 2; }
+  .hb-contenido { position: relative; line-height: 1; }
+  .hb-l1, .hb-l2 { font-family: "Montserrat", var(--sans); font-weight: 900; font-style: italic; letter-spacing: -.012em; }
+  .hb-l1 {
+    color: var(--amarillo); font-size: clamp(22px, 4.9vw, 80px);
+    display: flex; justify-content: center; align-items: center; gap: .28em; margin-bottom: .14em;
+  }
+  .hb-pill { background: var(--amarillo); color: var(--navy); border-radius: .24em; padding: .04em .18em .06em; }
+  .hb-l2 { font-size: clamp(18px, 5.1vw, 84px); line-height: 1.02; }
+  .hb-l3 {
+    font-family: "Barlow Condensed", var(--sans); font-weight: 600; color: var(--amarillo);
+    font-size: clamp(18px, 4.6vw, 74px); line-height: 1.05; margin-top: .05em;
+  }
+
+  /* Botón de pantalla completa (en la banda superior) */
+  .banda-in { justify-content: flex-start; }
+  .banda-in nav { margin-left: auto; }
+  .btn-pantalla {
+    margin-left: 20px; min-height: 32px; width: 36px; padding: 0; justify-content: center;
+    background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 2px;
+  }
+  .btn-pantalla:hover { background: rgba(255,255,255,.12); }
+  .btn-pantalla[hidden] { display: none; }
+  .btn-pantalla svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .btn-pantalla .ico-cerrar, html.en-pantalla .btn-pantalla .ico-abrir { display: none; }
+  html.en-pantalla .btn-pantalla .ico-cerrar { display: block; }
+  @media (max-width: 560px) { .btn-pantalla { margin-left: auto; } }
+  .hero { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  .cinta {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 20px;
+    font-family: var(--sans); font-weight: 600; font-size: 13.5px; color: var(--acero);
+    letter-spacing: .04em; padding: 22px 0 8px; border-bottom: 1px solid var(--navy);
+  }
+  .titulo { text-align: center; padding: 38px 0 18px; }
+  .titulo h1 {
+    font-family: var(--serif); font-weight: 700; color: var(--navy);
+    font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 0 0 12px;
+  }
+  .titulo .sub { font-weight: 700; font-size: 20px; margin: 0 0 6px; }
+  .titulo .curso { font-style: italic; margin: 0 0 22px; }
+  .regla { width: 92px; height: 3px; background: var(--acero); margin: 0 auto 18px; border: 0; }
+  .titulo .autor { font-family: var(--sans); font-weight: 600; color: var(--acero); margin: 0; }
+  .titulo .afil { font-size: 15px; margin: 2px 0 0; }
+  .accesos {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;
+    margin: 26px 0 8px;
+  }
+  .acceso {
+    display: block; text-decoration: none; color: var(--texto);
+    border: 1px solid var(--pizarra); border-radius: 2px; overflow: hidden; background: #fff;
+    transition: box-shadow .15s, transform .15s;
+  }
+  .acceso:hover { box-shadow: 0 6px 18px rgba(27,58,87,.14); transform: translateY(-1px); }
+  .acceso .cab { background: var(--pizarra); color: #fff; font-weight: 700; padding: 6px 12px; }
+  .acceso p { margin: 0; padding: 10px 12px 12px; font-size: 15.5px; }
+
+  /* Distribución con índice lateral */
+  .marco {
+    max-width: 1180px; margin: 0 auto; padding: 8px 16px 40px;
+    display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px;
+  }
+  .indice { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow: auto;
+            font-family: var(--sans); font-size: 14px; padding-top: 30px; }
+  .indice h4 { font-size: 12px; letter-spacing: .08em; color: var(--navy); margin: 0 0 8px; }
+  .indice ol { list-style: none; padding: 0; margin: 0 0 18px; }
+  .indice li a { display: block; padding: 4px 0 4px 10px; color: var(--gristexto); text-decoration: none;
+                 border-left: 2px solid var(--grislinea); }
+  .indice li a:hover, .indice li a.activo { color: var(--navy); border-left-color: var(--acero); }
+  main { min-width: 0; }
+
+  /* Secciones con el sello del resumen */
+  .seccion { padding-top: 30px; }
+  .seccion > h2 {
+    font-family: var(--sans); font-weight: 700; color: var(--navy); text-transform: uppercase;
+    font-size: 21px; letter-spacing: .03em; margin: 26px 0 6px;
+  }
+  .seccion > h2::after { content: ""; display: block; width: 62px; height: 3px; background: var(--acero); margin-top: 8px; }
+  h3 { font-family: var(--sans); font-weight: 600; color: var(--navy); font-size: 18px; margin: 30px 0 8px; }
+  .parte {
+    font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .1em; color: var(--acero);
+    margin: 48px 0 0; padding-top: 14px; border-top: 1px solid var(--navy);
+  }
+
+  /* Cajas: un único estilo para todas (igual que tcolorbox) */
+  .caja { border: 1px solid var(--pizarra); border-radius: 2px; margin: 20px 0; background: #fff; }
+  .caja > .cab {
+    background: var(--pizarra); color: #fff; font-weight: 700; padding: 5px 14px;
+    font-family: var(--serif); font-size: 17px;
+  }
+  .caja > .cab .nota { font-weight: 400; font-style: italic; }
+  .caja > .cuerpo { padding: 12px 16px; }
+  .caja > .cuerpo > :first-child { margin-top: 0; }
+  .caja > .cuerpo > :last-child { margin-bottom: 0; }
+  .caja.gris > .cuerpo { background: var(--fondo); }
+
+  /* Demostraciones desplegables dentro de la misma caja */
+  details.dem { border-top: 1px solid var(--grislinea); margin: 12px -16px -12px; }
+  details.dem > summary {
+    cursor: pointer; list-style: none; padding: 8px 16px;
+    font-family: var(--sans); font-weight: 600; font-size: 14.5px; color: var(--acero);
+    user-select: none;
+  }
+  details.dem > summary::-webkit-details-marker { display: none; }
+  details.dem > summary::before { content: "▸"; display: inline-block; width: 16px; transition: transform .15s; }
+  details.dem[open] > summary::before { transform: rotate(90deg); }
+  details.dem > .cont { padding: 0 16px 12px 32px; border-left: 3px solid var(--acero); margin: 0 16px 12px 16px; padding-left: 14px; }
+  .qed { float: right; color: var(--pizarra); }
+  .controles-dem { font-family: var(--sans); font-size: 14px; margin: 8px 0 0; }
+  .controles-dem button { margin-right: 8px; }
+
+  /* Tablas sobrias */
+  .tabla-wrap { overflow-x: auto; margin: 14px 0; }
+  table.t { border-collapse: collapse; font-size: 15.5px; min-width: 100%; }
+  table.t th, table.t td { border: 1px solid #39424c; padding: 6px 10px; text-align: center; }
+  table.t th { font-weight: 700; background: #fff; }
+  table.t td.izq, table.t th.izq { text-align: left; }
+  table.t.num td { font-variant-numeric: tabular-nums; }
+
+  /* Código */
+  .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px; }
+  button, .btn {
+    font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--pizarra); background: #fff; color: var(--navy);
+    padding: 7px 14px; border-radius: 2px; text-decoration: none; display: inline-flex; gap: 6px; align-items: center;
+    min-height: 36px;
+  }
+  button:hover, .btn:hover { background: var(--fondo); }
+  button.primario { background: var(--navy); color: #fff; border-color: var(--navy); }
+  button.primario:hover { background: #24496c; }
+  button:disabled { opacity: .55; cursor: progress; }
+  .estado-copia { font-family: var(--sans); font-size: 13.5px; color: var(--acero); min-width: 90px; }
+
+  pre.codigo {
+    margin: 0; background: var(--fondo); font-family: var(--mono); font-size: 14px; line-height: 1.55;
+    overflow-x: auto; padding: 10px 0; counter-reset: ln;
+  }
+  pre.codigo .l { display: block; padding: 0 16px 0 0; white-space: pre; }
+  pre.codigo .l::before {
+    counter-increment: ln; content: counter(ln); display: inline-block; width: 3.2em; padding-right: 1.1em;
+    text-align: right; color: #9aa4ae; font-size: 11px; user-select: none;
+  }
+  .tk-k1 { color: var(--navy); font-weight: 700; }
+  .tk-k2 { color: var(--acero); font-weight: 700; }
+  .tk-k3 { color: var(--pizarra); }
+  .tk-c { color: var(--comentario); font-style: italic; }
+  .tk-s { color: var(--cadena); }
+  .tk-n { color: #2f5d50; }
+  code.in { font-family: var(--mono); font-size: .88em; background: var(--fondo); padding: 1px 5px; border-radius: 2px; }
+
+  /* Laboratorio */
+  .lab-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; }
+  .res-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: center; }
+  .res-grid .vacio { grid-column: 1 / -1; }
+  .reproductor { display: flex; align-items: center; gap: 10px; padding: 8px 12px 0; font-family: var(--sans); font-size: 13.5px; color: var(--gristexto); }
+  .reproductor button { min-height: 32px; min-width: 40px; justify-content: center; padding: 4px 10px; }
+  .reproductor input[type=range] { flex: 1; accent-color: var(--acero); }
+  textarea.editor {
+    width: 100%; min-height: 520px; resize: vertical; border: 0; outline: 0; margin: 0; display: block;
+    background: var(--fondo); font-family: var(--mono); font-size: 13.5px; line-height: 1.5; padding: 12px 14px;
+    color: var(--texto); tab-size: 4; white-space: pre; overflow: auto;
+  }
+  .estado { font-family: var(--sans); font-size: 14px; color: var(--gristexto); margin: 8px 0 0; min-height: 22px; }
+  .estado.ok { color: #2f6b3a; } .estado.err { color: #9b2c2c; }
+  .lienzo-wrap { background: #fff; border-bottom: 1px solid var(--grislinea); }
+  canvas#ffjs-canvas { width: 100%; display: block; aspect-ratio: 1.414 / 1; background: #fff; }
+  .vacio { font-family: var(--sans); color: var(--gristexto); font-size: 14px; text-align: center; padding: 30px 10px; }
+  pre.consola {
+    margin: 0; max-height: 280px; overflow: auto; background: #10202f; color: #d6e2ee;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.45; padding: 10px 14px; white-space: pre-wrap;
+  }
+  svg.grafico { width: 100%; height: auto; display: block; }
+  .leyenda { font-family: var(--sans); font-size: 13px; color: var(--gristexto); display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+  .leyenda i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 6px; }
+
+  .pasos { counter-reset: paso; list-style: none; padding: 0; }
+  .pasos > li { counter-increment: paso; position: relative; padding-left: 34px; margin: 8px 0; }
+  .pasos > li::before {
+    content: counter(paso); position: absolute; left: 0; top: 1px; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--navy); color: #fff; font-family: var(--sans); font-size: 13px; font-weight: 600;
+    display: grid; place-items: center;
+  }
+  ul.vinetas { padding-left: 1.2em; }
+  ul.vinetas li::marker { color: var(--acero); content: "▸  "; }
+
+  /* Pie con instituciones */
+  footer { border-top: 1px solid var(--grislinea); margin-top: 30px; }
+  .pie-in { max-width: 1180px; margin: 0 auto; padding: 18px 16px 26px; }
+  .org { font-family: var(--sans); font-size: 12px; letter-spacing: .1em; color: var(--gristexto); text-align: center; margin: 0 0 12px; }
+  .logos { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px 0; }
+  .logos img { height: 58px; width: auto; padding: 0 26px; }
+  .logos img + img { border-left: 1px solid var(--grislinea); }
+  .logos img.ancho { height: 38px; }
+  .pie-texto { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 20px;
+               font-size: 13.5px; color: var(--gristexto); border-top: 1px solid var(--grislinea);
+               margin-top: 18px; padding-top: 10px; }
+  .banda-final { height: 12px; background: var(--navy); }
+
+  .katex { font-size: 1.04em; }
+  .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+
+  @media (max-width: 960px) {
+    .marco { grid-template-columns: 1fr; gap: 0; }
+    .indice { display: none; }
+    .lab-grid, .res-grid { grid-template-columns: 1fr; }
+    .banda-in nav { gap: 14px; }
+  }
+  @media (max-width: 560px) {
+    body { font-size: 16.5px; }
+    .banda-in nav { display: none; }
+    .caja > .cuerpo { padding: 10px 12px; }
+    details.dem { margin: 12px -12px -10px; }
+    .logos img { height: 44px; padding: 0 14px; }
+    .logos img.ancho { height: 30px; }
+    textarea.editor { min-height: 380px; }
+  }
+  @media print {
+    .banda, .indice, .barra, #laboratorio .lab-grid { display: none !important; }
+    details.dem > .cont { display: block !important; }
+    .marco { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<header class="banda">
+  <div class="banda-in">
+    <a class="marca" href="#inicio">EPRIMA 2026</a>
+    <nav aria-label="Secciones">
+      <a href="#teoria">TEORÍA</a>
+      <a href="#codigo">CÓDIGO</a>
+      <a href="#laboratorio">LABORATORIO</a>
+    </nav>
+    <button type="button" class="btn-pantalla" id="btn-pantalla" aria-label="Ver en pantalla completa" title="Pantalla completa">
+      <svg class="ico-abrir" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      <svg class="ico-cerrar" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ================================================================
+     PORTADA
+     ================================================================ -->
+<section id="inicio">
+  <div class="hero-banner" role="img" aria-label="E′(UBB) = 2026 · Escuela de Primavera en Matemática Aplicada · Novena versión">
+    <svg class="hb-formulas" viewBox="0 0 1600 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <text x="70" y="78" font-size="46">dz</text><line x1="62" y1="96" x2="128" y2="96"/><text x="72" y="140" font-size="46">dt</text>
+      <text x="150" y="122" font-size="46">= xy − βz</text>
+      <text x="36" y="255" font-size="64">)</text><text x="86" y="250" font-size="34">·</text>
+      <text x="420" y="88" font-size="38">ρ</text><text x="470" y="60" font-size="30">u²</text>
+      <text x="80" y="372" font-size="50">xᵢ − xⱼ</text><line x1="40" y1="392" x2="360" y2="392"/>
+      <text x="470" y="352" font-size="34">σ²</text><text x="560" y="300" font-size="30">∂u/∂t</text>
+      <text x="1040" y="70" font-size="34">∇·(K∇u)</text><text x="1250" y="120" font-size="40">S</text>
+      <text x="1330" y="230" font-size="40">cos(θ)</text><text x="1500" y="200" font-size="44">)</text>
+      <text x="1180" y="340" font-size="40">θ̇</text>
+      <text x="1330" y="372" font-size="46">− sin(θ)</text><line x1="1280" y1="320" x2="1580" y2="306"/>
+      <text x="1450" y="70" font-size="40">∫ f v</text><text x="960" y="390" font-size="30">λₖ</text>
+    </svg>
+    <div class="hb-contenido" aria-hidden="true">
+      <div class="hb-l1"><span>E’ (UBB) =</span><span class="hb-pill">2026</span></div>
+      <div class="hb-l2">ESCUELA DE PRIMAVERA</div>
+      <div class="hb-l2">EN MATEMÁTICA APLICADA</div>
+      <div class="hb-l3">NOVENA VERSIÓN</div>
+    </div>
+  </div>
+  <div class="hero">
+    <div class="cinta">
+      <span>EPRIMA 2026 · NOVENA VERSIÓN</span>
+      <span>CURSILLO · ANÁLISIS NUMÉRICO DE EDP</span>
+    </div>
+    <div class="titulo">
+      <h1>La Ecuación del Calor<br>Evolutiva en el Tiempo</h1>
+      <p class="sub">Euler implícito y elementos finitos: análisis y aproximación</p>
+      <p class="curso">Cursillo de Análisis Numérico de Ecuaciones en Derivadas Parciales</p>
+      <hr class="regla">
+      <p class="autor">Dr. Eligio A. Colmenares</p>
+      <p class="afil">Facultad de Ciencias · Universidad del Bío-Bío · Concepción, 2026</p>
+    </div>
+
+    <div class="caja">
+      <div class="cab">Objetivo general</div>
+      <div class="cuerpo">
+        Comprender la aproximación numérica de problemas parabólicos mediante la combinación del método
+        de Euler implícito en tiempo y el método de elementos finitos en espacio, tomando como modelo la
+        ecuación del calor con condición de Robin: desde su formulación variacional y su análisis a nivel
+        continuo, pasando por la semidiscretización temporal y el esquema totalmente discreto con su
+        estabilidad incondicional, hasta la estimación a priori del error $\mathcal O(h^2+\Delta t)$ y su
+        verificación computacional en <span style="font-family:var(--sans)">FreeFEM</span>.
+      </div>
+    </div>
+
+    <div class="accesos">
+      <a class="acceso" href="#teoria"><div class="cab">Parte I · Teoría</div>
+        <p>Formulación variacional, análisis continuo, Euler implícito, estabilidad y error a priori, con demostraciones.</p></a>
+      <a class="acceso" href="#codigo"><div class="cab">Parte II · Código FreeFEM</div>
+        <p>El programa evolutivo completo, listo para copiar, descargar y ejecutar en FreeFEM++.</p></a>
+      <a class="acceso" href="#laboratorio"><div class="cab">Parte III · Laboratorio</div>
+        <p>Ejecute FreeFEM en el navegador, vea la animación de la temperatura y las tasas en cada instante.</p></a>
+    </div>
+  </div>
+</section>
+
+<div class="marco">
+  <aside class="indice" aria-label="Índice">
+    <h4>TEORÍA</h4>
+    <ol>
+      <li><a href="#s-problema">1. Problema modelo</a></li>
+      <li><a href="#s-prelim">2. Preliminares</a></li>
+      <li><a href="#s-variacional">3. Formulación variacional</a></li>
+      <li><a href="#s-continuo">4. Análisis continuo</a></li>
+      <li><a href="#s-euler">5. Euler implícito</a></li>
+      <li><a href="#s-discreto">6. Esquema totalmente discreto</a></li>
+      <li><a href="#s-estab">7. Estabilidad</a></li>
+      <li><a href="#s-ritz">8. Proyección de Ritz</a></li>
+      <li><a href="#s-error">9. Error a priori</a></li>
+      <li><a href="#s-tasas">10. Orden experimental</a></li>
+    </ol>
+    <h4>COMPUTACIÓN</h4>
+    <ol>
+      <li><a href="#codigo">11. Código completo</a></li>
+      <li><a href="#disco">11.1 Dominio circular</a></li>
+      <li><a href="#anatomia">12. Del método al código</a></li>
+      <li><a href="#laboratorio">13. Laboratorio en línea</a></li>
+      <li><a href="#local">14. Ejecución local</a></li>
+    </ol>
+  </aside>
+
+<main>
+<p class="parte" id="teoria">PARTE I · TEORÍA</p>
+
+<!-- ================================================================
+     1. PROBLEMA MODELO
+     ================================================================ -->
+<section class="seccion" id="s-problema">
+  <h2>1. Problema modelo</h2>
+  <div class="caja">
+    <div class="cab">Problema de intercambio de calor dinámico</div>
+    <div class="cuerpo">
+      Sea $\Omega\subset\mathbb{R}^2$ un dominio acotado, poligonal y convexo, y $T>0$. Se busca la temperatura
+      $u:\overline\Omega\times[0,T]\to\mathbb{R}$ tal que
+      $$
+      \left\{\begin{aligned}
+        \rho C_p\,\frac{\partial u}{\partial t}-\operatorname{div}(K\nabla u) &= f && \text{en } \Omega\times(0,T],\\
+        K\nabla u\cdot\boldsymbol n+h\,u &= g && \text{sobre } \partial\Omega\times(0,T],\\
+        u(\cdot,0) &= u^0 && \text{en } \Omega .
+      \end{aligned}\right. \tag{P}
+      $$
+    </div>
+  </div>
+  <p>
+    Aquí $\rho C_p>0$ es el producto densidad × calor específico, $h>0$ el coeficiente de transferencia de calor
+    y $K$ el <strong>tensor de conductividad térmica</strong>, simétrico y uniformemente definido positivo. En el caso
+    diagonal $K=\operatorname{diag}(k_{x_1},k_{x_2})$, con $k_{x_i}$ el coeficiente de difusión en la dirección $x_i$,
+    $$ K\boldsymbol\xi\cdot\boldsymbol\xi\ge k_0|\boldsymbol\xi|^2,\qquad |K\boldsymbol\xi|\le k_1|\boldsymbol\xi|
+       \qquad\forall\boldsymbol\xi\in\mathbb{R}^2,\qquad k_0=\min_ik_{x_i},\ k_1=\max_ik_{x_i}. $$
+  </p>
+  <p>
+    El caso físico es $f=0$ y $g=h\,u_{\text{amb}}$: la condición de Robin
+    $K\nabla u\cdot\boldsymbol n=h\,(u_{\text{amb}}-u)$ es la <em>ley de enfriamiento de Newton</em>, que dice que el
+    flujo de calor a través del borde es proporcional a la diferencia de temperatura con el ambiente. Para verificar
+    el código se usan $\Omega=(0,1)^2$, $\rho C_p=1$, $K=\operatorname{diag}(1,0.5)$, $h=2$, $u_{\text{amb}}=1$ y la
+    solución exacta
+    $$ u(x,y,t)=u_{\text{amb}}+e^{-t}\sin(\pi x)\sin(\pi y), $$
+    de la que se calculan $f=e^{-t}\big((k_{x_1}+k_{x_2})\pi^2-\rho C_p\big)\sin(\pi x)\sin(\pi y)$,
+    $g=K\nabla u\cdot\boldsymbol n+h\,u$ y $u^0=u(\cdot,0)$.
+  </p>
+  <p>
+    <strong>Notación.</strong> $(u,v)=\int_\Omega uv$, $\ \langle u,v\rangle_{\partial\Omega}=\int_{\partial\Omega}uv\,\mathrm ds$,
+    $\ \|v\|_{1,\Omega}^2=\|v\|_{0,\Omega}^2+|v|_{1,\Omega}^2$; para la partición temporal $t_n=n\,\Delta t$,
+    $u^n=u(\cdot,t_n)$ y $\bar\partial w^n=(w^n-w^{n-1})/\Delta t$.
+  </p>
+</section>
+
+<!-- ================================================================
+     2. PRELIMINARES
+     ================================================================ -->
+<section class="seccion" id="s-prelim">
+  <h2>2. Preliminares</h2>
+  <div class="caja">
+    <div class="cab">Lema 1 <span class="nota">(Fórmula de Green para $\operatorname{div}(K\nabla\cdot)$)</span></div>
+    <div class="cuerpo">
+      Si $u\in H^2(\Omega)$ y $v\in H^1(\Omega)$, entonces
+      $$ -\int_\Omega\operatorname{div}(K\nabla u)\,v=\int_\Omega K\nabla u\cdot\nabla v-\int_{\partial\Omega}(K\nabla u\cdot\boldsymbol n)\,v\,\mathrm ds . $$
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        Para funciones regulares, $\operatorname{div}(v\,K\nabla u)=K\nabla u\cdot\nabla v+v\operatorname{div}(K\nabla u)$.
+        Integrando en $\Omega$ y aplicando el teorema de la divergencia,
+        $\int_{\partial\Omega}v\,K\nabla u\cdot\boldsymbol n=\int_\Omega K\nabla u\cdot\nabla v+\int_\Omega v\operatorname{div}(K\nabla u)$,
+        que es la fórmula. El caso general sigue por densidad y continuidad de la traza. <span class="qed">∎</span>
+      </div></details>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Lema 2 <span class="nota">(traza)</span></div>
+    <div class="cuerpo">
+      Existe $C_{\text{tr}}>0$ tal que $\|v\|_{0,\partial\Omega}\le C_{\text{tr}}\|v\|_{1,\Omega}$ para todo $v\in H^1(\Omega)$.
+      <details class="dem"><summary>Idea de la demostración</summary><div class="cont">
+        Para $v\in C^1(\overline\Omega)$ y un campo regular $\boldsymbol m$ con $\boldsymbol m\cdot\boldsymbol n\ge1$ en $\partial\Omega$
+        (existe para dominios Lipschitz), el teorema de la divergencia aplicado a $v^2\boldsymbol m$ da
+        $\int_{\partial\Omega}v^2\le\int_{\partial\Omega}v^2\,\boldsymbol m\cdot\boldsymbol n=\int_\Omega\big(v^2\operatorname{div}\boldsymbol m+2v\nabla v\cdot\boldsymbol m\big)\le C\|v\|_{1,\Omega}^2$.
+        Se concluye por densidad de $C^1(\overline\Omega)$ en $H^1(\Omega)$. <span class="qed">∎</span>
+      </div></details>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Lema 3 <span class="nota">(desigualdad de Friedrichs)</span></div>
+    <div class="cuerpo">
+      Existe $C_F>0$ tal que
+      $$ \|v\|_{1,\Omega}^2\le C_F\big(|v|_{1,\Omega}^2+\|v\|_{0,\partial\Omega}^2\big)\qquad\forall v\in H^1(\Omega). $$
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        Por contradicción: si no fuera cierto, existirían $v_k\in H^1(\Omega)$ con $\|v_k\|_{1,\Omega}=1$ y
+        $|v_k|_{1,\Omega}^2+\|v_k\|_{0,\partial\Omega}^2<1/k$. Por el teorema de Rellich ($H^1\hookrightarrow L^2$ compacta),
+        una subsucesión converge en $L^2(\Omega)$; como además $\nabla v_k\to0$ en $L^2$, la subsucesión es de Cauchy en
+        $H^1(\Omega)$ y converge a algún $v$ con $\nabla v=0$, es decir, $v$ es constante ($\Omega$ conexo). Por continuidad
+        de la traza, $\|v\|_{0,\partial\Omega}=\lim\|v_k\|_{0,\partial\Omega}=0$, luego $v=0$, lo que contradice
+        $\|v\|_{1,\Omega}=\lim\|v_k\|_{1,\Omega}=1$. <span class="qed">∎</span>
+      </div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     3. FORMULACIÓN VARIACIONAL
+     ================================================================ -->
+<section class="seccion" id="s-variacional">
+  <h2>3. Formulación variacional</h2>
+  <p>
+    Para $t$ fijo, se multiplica la EDP por $v\in H^1(\Omega)$, se integra y se aplica el Lema 1. La condición de Robin
+    permite reemplazar el flujo en el borde: $K\nabla u\cdot\boldsymbol n=g-h\,u$. Así,
+    $$ \int_\Omega\rho C_p\,\partial_tu\,v+\int_\Omega K\nabla u\cdot\nabla v+\int_{\partial\Omega}h\,u\,v=\int_\Omega fv+\int_{\partial\Omega}gv . $$
+    La condición de Robin es <em>natural</em>: aparece en la formulación y no restringe el espacio, que es $V=H^1(\Omega)$.
+  </p>
+  <div class="caja">
+    <div class="cab">Definición 1 <span class="nota">(problema variacional)</span></div>
+    <div class="cuerpo">
+      Con
+      $$ m(u,v):=\int_\Omega\rho C_p\,uv,\qquad a(u,v):=\int_\Omega K\nabla u\cdot\nabla v+\int_{\partial\Omega}h\,uv,\qquad
+         \ell(t;v):=\int_\Omega f(t)v+\int_{\partial\Omega}g(t)v, $$
+      dado $u^0$, hallar $u(t)\in V$ tal que
+      $$ m\big(\partial_tu(t),v\big)+a\big(u(t),v\big)=\ell(t;v)\qquad\forall v\in V,\ \ t\in(0,T],\qquad u(0)=u^0. \tag{PV} $$
+    </div>
+  </div>
+  <div class="caja">
+    <div class="cab">Proposición 1 <span class="nota">(consistencia)</span></div>
+    <div class="cuerpo">
+      Si $u$ es una solución clásica regular de (P), entonces es solución de (PV). Recíprocamente, si $u$ resuelve (PV) y
+      $u(t)\in H^2(\Omega)$, entonces $u$ satisface la EDP en casi todo punto y la condición de Robin en el sentido de trazas.
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        <p>La primera parte es la deducción anterior. Para la recíproca, tomando $v\in C_c^\infty(\Omega)$ en (PV) y usando
+        el Lema 1 (el término de borde se anula), $\int_\Omega\big(\rho C_p\partial_tu-\operatorname{div}(K\nabla u)-f\big)v=0$
+        para toda $v$ de prueba, luego la EDP se cumple c.t.p.</p>
+        <p>Usando ahora $v\in H^1(\Omega)$ arbitraria y restando la EDP integrada, queda
+        $\int_{\partial\Omega}\big(K\nabla u\cdot\boldsymbol n+hu-g\big)v=0$ para todo $v$. Como las trazas de $H^1(\Omega)$ son
+        densas en $L^2(\partial\Omega)$, se obtiene la condición de Robin. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     4. ANÁLISIS CONTINUO
+     ================================================================ -->
+<section class="seccion" id="s-continuo">
+  <h2>4. Análisis a nivel continuo</h2>
+  <div class="caja">
+    <div class="cab">Proposición 2 <span class="nota">(continuidad y coercividad)</span></div>
+    <div class="cuerpo">
+      Las formas $m$ y $a$ son bilineales y simétricas, $m(v,v)=\rho C_p\|v\|_{0,\Omega}^2$ y, para todo $u,v\in H^1(\Omega)$,
+      $$ |a(u,v)|\le M\|u\|_{1,\Omega}\|v\|_{1,\Omega},\quad M=k_1+hC_{\text{tr}}^2;\qquad
+         a(v,v)\ge\alpha\|v\|_{1,\Omega}^2,\quad \alpha=\frac{\min\{k_0,h\}}{C_F}. $$
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        <p><strong>Continuidad.</strong> Por Cauchy–Schwarz y $|K\boldsymbol\xi|\le k_1|\boldsymbol\xi|$,
+        $\big|\int_\Omega K\nabla u\cdot\nabla v\big|\le k_1|u|_{1,\Omega}|v|_{1,\Omega}$. Por el Lema 2,
+        $\big|\int_{\partial\Omega}huv\big|\le h\|u\|_{0,\partial\Omega}\|v\|_{0,\partial\Omega}\le hC_{\text{tr}}^2\|u\|_{1,\Omega}\|v\|_{1,\Omega}$.</p>
+        <p><strong>Coercividad.</strong> Por la elipticidad de $K$ y el Lema 3,
+        $a(v,v)\ge k_0|v|_{1,\Omega}^2+h\|v\|_{0,\partial\Omega}^2\ge\min\{k_0,h\}\big(|v|_{1,\Omega}^2+\|v\|_{0,\partial\Omega}^2\big)\ge\frac{\min\{k_0,h\}}{C_F}\|v\|_{1,\Omega}^2$.
+        Observe que si $h=0$ (Neumann puro) la coercividad falla: las constantes tienen $a(c,c)=0$. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Teorema 1 <span class="nota">(existencia y unicidad, J.-L. Lions)</span></div>
+    <div class="cuerpo">
+      Si $u^0\in L^2(\Omega)$, $f\in L^2(0,T;L^2(\Omega))$ y $g\in L^2(0,T;L^2(\partial\Omega))$, existe una única
+      $u\in L^2(0,T;H^1(\Omega))\cap C([0,T];L^2(\Omega))$, con $\partial_tu\in L^2(0,T;H^1(\Omega)')$, que resuelve (PV).
+      <details class="dem"><summary>Idea de la demostración</summary><div class="cont">
+        <p><strong>Existencia (Faedo–Galerkin).</strong> Se proyecta (PV) sobre subespacios $V_N$ de dimensión finita, lo que
+        da un sistema de EDO lineales con solución $u_N$. La estimación de energía (Proposición 3) acota $u_N$ en
+        $L^\infty(0,T;L^2)\cap L^2(0,T;H^1)$ uniformemente en $N$; por compacidad débil se extrae una subsucesión
+        convergente y se pasa al límite en la formulación.</p>
+        <p><strong>Unicidad.</strong> Es consecuencia directa de la Proposición 3, como se muestra allí. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Proposición 3 <span class="nota">(estimación de energía y unicidad)</span></div>
+    <div class="cuerpo">
+      Toda solución de (PV) satisface, para $t\in[0,T]$,
+      $$ \|u(t)\|_m^2+\alpha\int_0^t\|u(s)\|_{1,\Omega}^2\,\mathrm ds\le\|u^0\|_m^2+\frac1\alpha\int_0^t\|\ell(s)\|_*^2\,\mathrm ds,
+         \qquad \|v\|_m^2:=m(v,v),\quad \|\ell\|_*:=\sup_{v\ne0}\frac{\ell(v)}{\|v\|_{1,\Omega}} . $$
+      En particular, (PV) tiene a lo más una solución.
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        <p>Tomando $v=u(t)$ y usando la simetría de $m$, $m(\partial_tu,u)=\tfrac12\tfrac{\mathrm d}{\mathrm dt}\|u\|_m^2$. Luego
+        $$ \tfrac12\tfrac{\mathrm d}{\mathrm dt}\|u\|_m^2+a(u,u)=\ell(t;u)\le\|\ell(t)\|_*\|u\|_{1,\Omega}\le\tfrac\alpha2\|u\|_{1,\Omega}^2+\tfrac1{2\alpha}\|\ell(t)\|_*^2 . $$
+        Con la coercividad, $\tfrac{\mathrm d}{\mathrm dt}\|u\|_m^2+\alpha\|u\|_{1,\Omega}^2\le\tfrac1\alpha\|\ell(t)\|_*^2$, e
+        integrando en $(0,t)$ se obtiene la estimación.</p>
+        <p>Si $u_1,u_2$ son soluciones con los mismos datos, $w=u_1-u_2$ resuelve (PV) con $\ell=0$ y $w(0)=0$; la
+        estimación da $\|w(t)\|_m=0$ para todo $t$. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Proposición 4 <span class="nota">(el cuerpo tiende a la temperatura ambiente)</span></div>
+    <div class="cuerpo">
+      Si $f=0$ y $g=h\,u_{\text{amb}}$ con $u_{\text{amb}}$ constante, entonces
+      $$ \|u(t)-u_{\text{amb}}\|_{0,\Omega}\le e^{-\alpha t/(\rho C_p)}\,\|u^0-u_{\text{amb}}\|_{0,\Omega}\ \xrightarrow[t\to\infty]{}\ 0 . $$
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        Sea $w=u-u_{\text{amb}}$. Como $u_{\text{amb}}$ es constante, $\partial_tw=\partial_tu$, $\nabla w=\nabla u$ y
+        $K\nabla w\cdot\boldsymbol n+hw=g-hu_{\text{amb}}=0$: $w$ resuelve el problema con datos nulos. Tomando $v=w$,
+        $$ \tfrac12\tfrac{\mathrm d}{\mathrm dt}\|w\|_m^2=-a(w,w)\le-\alpha\|w\|_{1,\Omega}^2\le-\alpha\|w\|_{0,\Omega}^2=-\tfrac{\alpha}{\rho C_p}\|w\|_m^2 . $$
+        Por el lema de Gronwall, $\|w(t)\|_m^2\le e^{-2\alpha t/(\rho C_p)}\|w(0)\|_m^2$, y como
+        $\|\cdot\|_m=\sqrt{\rho C_p}\,\|\cdot\|_{0,\Omega}$ se concluye. <span class="qed">∎</span>
+      </div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     5. EULER IMPLÍCITO
+     ================================================================ -->
+<section class="seccion" id="s-euler">
+  <h2>5. Semidiscretización temporal: Euler implícito</h2>
+  <p>
+    Se divide $[0,T]$ en $N$ subintervalos de longitud $\Delta t=T/N$, con $t_n=t_0+n\,\Delta t=n\,\Delta t$, y se busca
+    $u^n\approx u(\cdot,t_n)$. El método de Euler implícito evalúa la EDP en $t_n$ y reemplaza la derivada por el
+    cociente hacia atrás:
+    $$ \frac{\partial u}{\partial t}(t_n)\approx\frac{u(t_n)-u(t_{n-1})}{\Delta t}. $$
+  </p>
+  <figure class="caja">
+    <div class="cab">Figura 1 <span class="nota">(partición del intervalo temporal)</span></div>
+    <div class="cuerpo">
+      <svg viewBox="0 0 640 96" class="grafico" role="img" aria-label="Partición uniforme del intervalo [0,T] en pasos de longitud delta t">
+        <g font-family="KaTeX_Main, serif" font-size="15" fill="#1d232a">
+          <line x1="20" y1="50" x2="250" y2="50" stroke="#50677D" stroke-width="1.6"/>
+          <line x1="262" y1="50" x2="350" y2="50" stroke="#50677D" stroke-width="1.6" stroke-dasharray="2 5"/>
+          <line x1="362" y1="50" x2="620" y2="50" stroke="#50677D" stroke-width="1.6"/>
+          <g stroke="#1B3A57" stroke-width="2">
+            <line x1="20" y1="43" x2="20" y2="57"/><line x1="96" y1="43" x2="96" y2="57"/><line x1="172" y1="43" x2="172" y2="57"/><line x1="248" y1="43" x2="248" y2="57"/>
+            <line x1="420" y1="43" x2="420" y2="57"/><line x1="496" y1="43" x2="496" y2="57"/><line x1="620" y1="43" x2="620" y2="57"/>
+          </g>
+          <text x="20" y="80" text-anchor="middle">t₀ = 0</text><text x="96" y="80" text-anchor="middle">t₁</text>
+          <text x="172" y="80" text-anchor="middle">t₂</text><text x="248" y="80" text-anchor="middle">t₃</text>
+          <text x="420" y="80" text-anchor="middle">tₙ₋₁</text><text x="496" y="80" text-anchor="middle">tₙ</text>
+          <text x="620" y="80" text-anchor="middle">t_N = T</text>
+          <g fill="#3D7AA8" font-size="14">
+            <text x="58" y="26" text-anchor="middle">Δt</text><text x="134" y="26" text-anchor="middle">Δt</text>
+            <text x="210" y="26" text-anchor="middle">Δt</text><text x="458" y="26" text-anchor="middle">Δt</text>
+          </g>
+          <g stroke="#3D7AA8" stroke-width="1.2">
+            <line x1="24" y1="33" x2="92" y2="33"/><line x1="100" y1="33" x2="168" y2="33"/>
+            <line x1="176" y1="33" x2="244" y2="33"/><line x1="424" y1="33" x2="492" y2="33"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </figure>
+
+  <div class="caja">
+    <div class="cab">Lema 4 <span class="nota">(error de truncación de Euler)</span></div>
+    <div class="cuerpo">
+      Si $\partial_t^2u\in L^2(0,T;L^2(\Omega))$, el error de truncación
+      $\tau^n:=\dfrac{u(t_n)-u(t_{n-1})}{\Delta t}-\partial_tu(t_n)$ satisface
+      $$ \tau^n=-\frac1{\Delta t}\int_{t_{n-1}}^{t_n}(s-t_{n-1})\,\partial_t^2u(s)\,\mathrm ds,\qquad
+         \|\tau^n\|_{0,\Omega}\le\int_{t_{n-1}}^{t_n}\|\partial_t^2u\|_{0,\Omega}\,\mathrm ds,\qquad
+         \Delta t\sum_{n=1}^N\|\tau^n\|_{0,\Omega}^2\le\Delta t^2\int_0^T\|\partial_t^2u\|_{0,\Omega}^2\,\mathrm ds . $$
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        <p>Por Taylor con resto integral alrededor de $t_n$:
+        $u(t_{n-1})=u(t_n)-\Delta t\,\partial_tu(t_n)+\int_{t_{n-1}}^{t_n}(s-t_{n-1})\,\partial_t^2u(s)\,\mathrm ds$.
+        Despejando se obtiene la expresión de $\tau^n$. Como $0\le s-t_{n-1}\le\Delta t$, la segunda desigualdad es inmediata.</p>
+        <p>Por Cauchy–Schwarz en tiempo, $\|\tau^n\|_{0,\Omega}^2\le\Delta t\int_{t_{n-1}}^{t_n}\|\partial_t^2u\|_{0,\Omega}^2$;
+        multiplicando por $\Delta t$ y sumando en $n$ se obtiene la última. El método es de <strong>primer orden</strong>
+        en $\Delta t$. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+
+  <p>Dado $u^0$, en cada paso $n\ge1$ se resuelve el problema estacionario</p>
+  <div class="caja">
+    <div class="cab">Problema estacionario de cada paso $(\mathrm{PVF}^n)$</div>
+    <div class="cuerpo">
+      $$
+      \left\{\begin{aligned}
+        \frac{\rho C_p}{\Delta t}\,u^n-\operatorname{div}(K\nabla u^n) &= \frac{\rho C_p}{\Delta t}\,u^{n-1}+f(t_n) && \text{en }\Omega,\\
+        K\nabla u^n\cdot\boldsymbol n+h\,u^n &= g(t_n) && \text{sobre }\partial\Omega,
+      \end{aligned}\right.
+      $$
+      cuya formulación variacional es: hallar $u^n\in H^1(\Omega)$ tal que $a_{\Delta t}(u^n,v)=F^n(v)$ para todo $v$, con
+      $$ a_{\Delta t}(u,v):=\frac1{\Delta t}m(u,v)+a(u,v),\qquad F^n(v):=\frac1{\Delta t}m(u^{n-1},v)+\ell(t_n;v). $$
+    </div>
+  </div>
+  <div class="tabla-wrap">
+    <table class="t">
+      <thead><tr><th>Paso $n$</th><th>Se conoce</th><th>Se calcula</th><th>Aproxima a</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>$u^0$</td><td>$u^1$</td><td>$u(\cdot,t_1)$</td></tr>
+        <tr><td>2</td><td>$u^1$</td><td>$u^2$</td><td>$u(\cdot,t_2)$</td></tr>
+        <tr><td>$\vdots$</td><td>$\vdots$</td><td>$\vdots$</td><td>$\vdots$</td></tr>
+        <tr><td>$n$</td><td>$u^{n-1}$</td><td>$u^n$</td><td>$u(\cdot,t_n)$</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Teorema 2 <span class="nota">(cada paso está bien planteado)</span></div>
+    <div class="cuerpo">
+      Para todo $\Delta t>0$, el problema $(\mathrm{PVF}^n)$ tiene una única solución $u^n\in H^1(\Omega)$. La forma
+      $a_{\Delta t}$ es coerciva con $\alpha_{\Delta t}=\min\{\rho C_p/\Delta t,\ k_0\}$, <em>sin necesidad</em> de la
+      desigualdad de Friedrichs.
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        <p>$a_{\Delta t}$ es bilineal, simétrica y continua (suma de formas continuas). Para la coercividad,
+        $$ a_{\Delta t}(v,v)=\frac{\rho C_p}{\Delta t}\|v\|_{0,\Omega}^2+\int_\Omega K\nabla v\cdot\nabla v+h\|v\|_{0,\partial\Omega}^2
+           \ge\frac{\rho C_p}{\Delta t}\|v\|_{0,\Omega}^2+k_0|v|_{1,\Omega}^2\ge\alpha_{\Delta t}\|v\|_{1,\Omega}^2 . $$
+        El término de masa controla la parte $L^2$ de la norma. $F^n$ es continuo:
+        $|F^n(v)|\le\big(\tfrac{\rho C_p}{\Delta t}\|u^{n-1}\|_{0,\Omega}+\|f(t_n)\|_{0,\Omega}+C_{\text{tr}}\|g(t_n)\|_{0,\partial\Omega}\big)\|v\|_{1,\Omega}$.
+        Lax–Milgram da existencia y unicidad. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+  <div class="caja gris">
+    <div class="cab">Observación <span class="nota">(implícito versus explícito)</span></div>
+    <div class="cuerpo">
+      Euler explícito usa $\operatorname{div}(K\nabla u^{n-1})$ y en cada paso solo requiere invertir la matriz de masa, pero
+      es estable solo si $\Delta t\le C\,\rho C_p\,h^2/k_1$ (por la desigualdad inversa $|v_h|_{1}\le Ch^{-1}\|v_h\|_0$). Euler
+      implícito exige resolver un sistema en cada paso, pero es estable para cualquier $\Delta t$ (sección 7).
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     6. ESQUEMA TOTALMENTE DISCRETO
+     ================================================================ -->
+<section class="seccion" id="s-discreto">
+  <h2>6. Esquema totalmente discreto</h2>
+  <p>
+    Sea $\mathcal T_h$ una triangulación conforme de $\overline\Omega$ y
+    $V_h=\{v_h\in C(\overline\Omega):v_h|_K\in\mathbb P_1(K)\ \forall K\in\mathcal T_h\}\subset H^1(\Omega)$, sin restricción en
+    el borde (la condición de Robin es natural).
+  </p>
+  <div class="caja">
+    <div class="cab">Definición 2 <span class="nota">(Euler implícito + elementos finitos $\mathbb P_1$)</span></div>
+    <div class="cuerpo">
+      Dado $u_h^0=I_hu^0$, para $n=1,\dots,N$ hallar $u_h^n\in V_h$ tal que
+      $$ m\big(\bar\partial u_h^n,v_h\big)+a(u_h^n,v_h)=\ell(t_n;v_h)\qquad\forall v_h\in V_h. \tag{PV$_h^n$} $$
+      Con la base nodal $\{\varphi_j\}$ y $u_h^n=\sum_jU_j^n\varphi_j$, equivale al sistema
+      $$ \Big(\frac1{\Delta t}M+A_K+R\Big)\boldsymbol U^n=\frac1{\Delta t}M\boldsymbol U^{n-1}+\boldsymbol L^n, $$
+      $$ M_{ij}=\int_\Omega\rho C_p\varphi_j\varphi_i,\quad (A_K)_{ij}=\int_\Omega K\nabla\varphi_j\cdot\nabla\varphi_i,\quad
+         R_{ij}=\int_{\partial\Omega}h\varphi_j\varphi_i,\quad L_i^n=\int_\Omega f(t_n)\varphi_i+\int_{\partial\Omega}g(t_n)\varphi_i . $$
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Proposición 5 <span class="nota">(la matriz del sistema es simétrica y definida positiva)</span></div>
+    <div class="cuerpo">
+      La matriz $\frac1{\Delta t}M+A_K+R$ es simétrica y definida positiva para todo $\Delta t>0$; por tanto cada paso del
+      esquema tiene solución única.
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        La simetría sigue de la simetría de $m$ y $a$. Para $\boldsymbol V\ne0$ y $v_h=\sum_jV_j\varphi_j\ne0$,
+        $$ \boldsymbol V^{\!\top}\Big(\frac1{\Delta t}M+A_K+R\Big)\boldsymbol V=\frac1{\Delta t}m(v_h,v_h)+a(v_h,v_h)\ge\frac{\rho C_p}{\Delta t}\|v_h\|_{0,\Omega}^2>0. $$
+        Una matriz definida positiva es invertible. <span class="qed">∎</span>
+      </div></details>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Proposición 6 <span class="nota">(matriz de masa elemental)</span></div>
+    <div class="cuerpo">
+      Sobre un triángulo $K$, $\int_K\lambda_j\lambda_i=\dfrac{|K|}{12}(1+\delta_{ij})$. En el triángulo de referencia
+      ($|\widehat K|=\tfrac12$):
+      $$ \widehat M=\frac1{24}\begin{pmatrix}2&1&1\\1&2&1\\1&1&2\end{pmatrix}. $$
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        Con la fórmula $\int_{\widehat K}\hat x^a\hat y^b\,\mathrm d\hat x=\dfrac{a!\,b!}{(a+b+2)!}$:
+        $\int_{\widehat K}\hat x^2=\tfrac{2}{24}=\tfrac1{12}$ y $\int_{\widehat K}\hat x\hat y=\tfrac1{24}$. Por simetría de las
+        coordenadas baricéntricas (cualquier permutación de vértices es una transformación afín que preserva el área),
+        $\int\widehat\lambda_i^2=\tfrac1{12}$ y $\int\widehat\lambda_i\widehat\lambda_j=\tfrac1{24}$ para $i\ne j$. En un
+        triángulo general se escala por $|K|/|\widehat K|=2|K|$. <span class="qed">∎</span>
+      </div></details>
+    </div>
+  </div>
+  <div class="caja gris">
+    <div class="cab">Observación <span class="nota">(costo computacional)</span></div>
+    <div class="cuerpo">
+      Si $\Delta t$ es constante, $\frac1{\Delta t}M+A_K+R$ no cambia en el tiempo: se ensambla y se factoriza
+      <strong>una sola vez</strong>. En cada paso solo se calcula el lado derecho
+      $\frac1{\Delta t}M\boldsymbol U^{n-1}+\boldsymbol L^n$ (un producto matriz–vector y la integración de $f$ y $g$) y se
+      resuelve con la factorización ya hecha. Así está escrito el código de la sección 11.
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     7. ESTABILIDAD
+     ================================================================ -->
+<section class="seccion" id="s-estab">
+  <h2>7. Estabilidad incondicional</h2>
+  <div class="caja">
+    <div class="cab">Teorema 3 <span class="nota">(estabilidad del esquema)</span></div>
+    <div class="cuerpo">
+      Para todo $\Delta t>0$ y toda malla, la solución de (PV$_h^n$) satisface
+      $$ \|u_h^N\|_m^2+\alpha\,\Delta t\sum_{n=1}^N\|u_h^n\|_{1,\Omega}^2\le\|u_h^0\|_m^2+\frac{\Delta t}{\alpha}\sum_{n=1}^N\|\ell(t_n)\|_*^2 . $$
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        <p>La identidad $2(a-b)a=a^2-b^2+(a-b)^2$, válida para cualquier producto interior, da
+        $$ m(u_h^n-u_h^{n-1},u_h^n)=\tfrac12\big(\|u_h^n\|_m^2-\|u_h^{n-1}\|_m^2+\|u_h^n-u_h^{n-1}\|_m^2\big)\ge\tfrac12\big(\|u_h^n\|_m^2-\|u_h^{n-1}\|_m^2\big). $$
+        Tomando $v_h=u_h^n$ en (PV$_h^n$), multiplicando por $\Delta t$ y usando coercividad:
+        $$ \tfrac12\big(\|u_h^n\|_m^2-\|u_h^{n-1}\|_m^2\big)+\alpha\Delta t\|u_h^n\|_{1,\Omega}^2\le\Delta t\,\|\ell(t_n)\|_*\|u_h^n\|_{1,\Omega}
+           \le\tfrac{\alpha\Delta t}{2}\|u_h^n\|_{1,\Omega}^2+\tfrac{\Delta t}{2\alpha}\|\ell(t_n)\|_*^2 . $$
+        Multiplicando por 2 y sumando de $n=1$ a $N$, la suma telescópica da el resultado.</p>
+        <p>Ninguna hipótesis relaciona $\Delta t$ con $h$: la estabilidad es <strong>incondicional</strong>. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+  <div class="caja">
+    <div class="cab">Corolario 1 <span class="nota">(decaimiento discreto)</span></div>
+    <div class="cuerpo">
+      Si $f=0$ y $g=h\,u_{\text{amb}}$, entonces
+      $\ \|u_h^n-u_{\text{amb}}\|_m\le\big(1+\alpha\Delta t/\rho C_p\big)^{-n}\|u_h^0-u_{\text{amb}}\|_m$: el esquema reproduce
+      el decaimiento continuo de la Proposición 4.
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        La constante $u_{\text{amb}}$ pertenece a $V_h$ y satisface $a(u_{\text{amb}},v_h)=\int_{\partial\Omega}hu_{\text{amb}}v_h=\ell(v_h)$,
+        así que $w_h^n=u_h^n-u_{\text{amb}}$ resuelve el esquema con $\ell=0$. Tomando $v_h=w_h^n$ y usando Cauchy–Schwarz,
+        $\|w_h^n\|_m^2-\|w_h^{n-1}\|_m\|w_h^n\|_m+\Delta t\,a(w_h^n,w_h^n)\le0$. Como
+        $a(w,w)\ge\alpha\|w\|_{0,\Omega}^2=\tfrac{\alpha}{\rho C_p}\|w\|_m^2$, resulta
+        $(1+\alpha\Delta t/\rho C_p)\|w_h^n\|_m\le\|w_h^{n-1}\|_m$, y se itera. <span class="qed">∎</span>
+      </div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     8. PROYECCIÓN DE RITZ
+     ================================================================ -->
+<section class="seccion" id="s-ritz">
+  <h2>8. Proyección de Ritz</h2>
+  <div class="caja">
+    <div class="cab">Definición 3 y Lema 5 <span class="nota">(proyección elíptica)</span></div>
+    <div class="cuerpo">
+      Para $v\in H^1(\Omega)$ se define $R_hv\in V_h$ por $a(R_hv-v,w_h)=0$ para todo $w_h\in V_h$ (está bien definida por
+      Lax–Milgram en $V_h$). Si $\Omega$ es convexo y $v\in H^2(\Omega)$,
+      $$ \|v-R_hv\|_{1,\Omega}\le C\,h\,|v|_{2,\Omega},\qquad \|v-R_hv\|_{0,\Omega}\le C\,h^2\,|v|_{2,\Omega}. $$
+      Además $R_h$ es lineal e independiente de $t$, por lo que $\partial_t(R_hu)=R_h(\partial_tu)$.
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        <p><strong>Norma $H^1$.</strong> $R_hv$ es la aproximación de Galerkin de $v$ para la forma $a$; por el lema de Céa y
+        la estimación de interpolación, $\|v-R_hv\|_{1,\Omega}\le\frac M\alpha\|v-I_hv\|_{1,\Omega}\le Ch|v|_{2,\Omega}$.</p>
+        <p><strong>Norma $L^2$ (Aubin–Nitsche).</strong> Sea $e=v-R_hv$ y $z\in H^1(\Omega)$ la solución del problema dual
+        $a(w,z)=(e,w)$ para todo $w$, es decir, $-\operatorname{div}(K\nabla z)=e$ con condición de Robin homogénea. En un dominio
+        convexo, $z\in H^2(\Omega)$ con $|z|_{2,\Omega}\le C_R\|e\|_{0,\Omega}$. Entonces
+        $$ \|e\|_{0,\Omega}^2=a(e,z)=a(e,z-I_hz)\le M\|e\|_{1,\Omega}\,Ch|z|_{2,\Omega}\le C\,h\,\|e\|_{1,\Omega}\|e\|_{0,\Omega}, $$
+        donde se usó $a(e,I_hz)=0$. Así $\|e\|_{0,\Omega}\le Ch\|e\|_{1,\Omega}\le Ch^2|v|_{2,\Omega}$. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     9. ERROR A PRIORI
+     ================================================================ -->
+<section class="seccion" id="s-error">
+  <h2>9. Análisis del error a priori</h2>
+  <div class="caja">
+    <div class="cab">Teorema 4 <span class="nota">(estimación de error del esquema totalmente discreto)</span></div>
+    <div class="cuerpo">
+      Supongamos $\Omega$ convexo, $u\in C^1([0,T];H^2(\Omega))$, $\partial_t^2u\in L^2(0,T;L^2(\Omega))$ y $u_h^0=I_hu^0$. Entonces,
+      para $n=1,\dots,N$,
+      $$ \|u(t_n)-u_h^n\|_{0,\Omega}\le C\,\big(h^2+\Delta t\big), $$
+      $$ \Big(\Delta t\sum_{j=1}^n\|u(t_j)-u_h^j\|_{1,\Omega}^2\Big)^{1/2}\le C\,\big(h+\Delta t\big), $$
+      con $C$ independiente de $h$ y $\Delta t$ (dependiente de $u$, $T$ y los datos).
+      <details class="dem"><summary>Demostración</summary><div class="cont">
+        <p><strong>1. Descomposición.</strong> Escribimos
+        $u_h^n-u^n=\theta^n+\rho^n$ con $\theta^n:=u_h^n-R_hu^n\in V_h$ y $\rho^n:=R_hu^n-u^n$. Por el Lema 5,
+        $\|\rho^n\|_{0,\Omega}\le Ch^2|u^n|_{2,\Omega}$ y $\|\rho^n\|_{1,\Omega}\le Ch|u^n|_{2,\Omega}$.</p>
+        <p><strong>2. Ecuación del error.</strong> Para $v_h\in V_h$, usando el esquema, la formulación continua en $t_n$ y la
+        definición de $R_h$ ($a(R_hu^n,v_h)=a(u^n,v_h)$):
+        $$ m(\bar\partial\theta^n,v_h)+a(\theta^n,v_h)=\ell(t_n;v_h)-m(\bar\partial R_hu^n,v_h)-a(u^n,v_h)=m(\omega^n,v_h), $$
+        con $\omega^n:=\partial_tu(t_n)-\bar\partial R_hu^n=\omega_1^n+\omega_2^n$, donde
+        $\omega_1^n:=\partial_tu(t_n)-\bar\partial u^n=-\tau^n$ y $\omega_2^n:=\bar\partial(u^n-R_hu^n)$.</p>
+        <p><strong>3. Estimación de energía para $\theta$.</strong> Tomando $v_h=\theta^n$, procediendo como en el Teorema 3 y
+        usando $m(\omega^n,\theta^n)\le\rho C_p\|\omega^n\|_{0,\Omega}\|\theta^n\|_{1,\Omega}\le\frac{\alpha}{2}\|\theta^n\|_{1,\Omega}^2+\frac{(\rho C_p)^2}{2\alpha}\|\omega^n\|_{0,\Omega}^2$:
+        $$ \|\theta^n\|_m^2+\alpha\Delta t\sum_{j=1}^n\|\theta^j\|_{1,\Omega}^2\le\|\theta^0\|_m^2+\frac{(\rho C_p)^2}{\alpha}\,\Delta t\sum_{j=1}^n\|\omega^j\|_{0,\Omega}^2 . $$</p>
+        <p><strong>4. Término temporal.</strong> Por el Lema 4,
+        $\Delta t\sum_j\|\omega_1^j\|_{0,\Omega}^2\le\Delta t^2\int_0^{t_n}\|\partial_t^2u\|_{0,\Omega}^2$.</p>
+        <p><strong>5. Término espacial.</strong> Como $R_h$ conmuta con $\partial_t$,
+        $\omega_2^j=\frac1{\Delta t}\int_{t_{j-1}}^{t_j}(I-R_h)\partial_tu\,\mathrm ds$; por Cauchy–Schwarz y el Lema 5,
+        $\|\omega_2^j\|_{0,\Omega}^2\le\frac{C^2h^4}{\Delta t}\int_{t_{j-1}}^{t_j}|\partial_tu|_{2,\Omega}^2$, luego
+        $\Delta t\sum_j\|\omega_2^j\|_{0,\Omega}^2\le C^2h^4\int_0^{t_n}|\partial_tu|_{2,\Omega}^2$.</p>
+        <p><strong>6. Dato inicial.</strong> $\theta^0=(I_hu^0-u^0)+(u^0-R_hu^0)$, así que $\|\theta^0\|_{0,\Omega}\le Ch^2|u^0|_{2,\Omega}$.</p>
+        <p><strong>7. Conclusión.</strong> De 3–6, $\|\theta^n\|_{0,\Omega}+\big(\Delta t\sum_j\|\theta^j\|_{1,\Omega}^2\big)^{1/2}\le C(h^2+\Delta t)$.
+        Con la desigualdad triangular y el paso 1:
+        $\|u^n-u_h^n\|_{0,\Omega}\le\|\theta^n\|_{0,\Omega}+\|\rho^n\|_{0,\Omega}\le C(h^2+\Delta t)$, y en la norma $H^1$
+        discreta en tiempo el término $\rho$ aporta $\mathcal O(h)$, lo que da $C(h+\Delta t)$. <span class="qed">∎</span></p>
+      </div></details>
+    </div>
+  </div>
+  <div class="caja gris">
+    <div class="cab">Observación <span class="nota">(error en $H^1$ en cada instante)</span></div>
+    <div class="cuerpo">
+      Tomando $v_h=\bar\partial\theta^n$ en la ecuación del error se obtiene también, bajo hipótesis de regularidad
+      similares, $|u(t_n)-u_h^n|_{1,\Omega}\le C(h+\Delta t)$ para cada $n$: es lo que mide el código en cada instante.
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     10. ORDEN EXPERIMENTAL
+     ================================================================ -->
+<section class="seccion" id="s-tasas">
+  <h2>10. Orden de convergencia experimental</h2>
+  <p>
+    El error total es $\mathcal O(h^2+\Delta t)$ en $L^2$ y $\mathcal O(h+\Delta t)$ en $H^1$. Al refinar simultáneamente,
+    la tasa observada respecto de $h$ depende de cómo se acople $\Delta t$ con $h$:
+  </p>
+  <div class="tabla-wrap">
+    <table class="t">
+      <thead><tr><th>Elección de $\Delta t$</th><th>error $L^2$</th><th>tasa $L^2$</th><th>error $H^1$</th><th>tasa $H^1$</th></tr></thead>
+      <tbody>
+        <tr><td>$\Delta t\sim h^2$</td><td>$\mathcal O(h^2)$</td><td>2</td><td>$\mathcal O(h)$</td><td>1</td></tr>
+        <tr><td>$\Delta t\sim h$</td><td>$\mathcal O(h)$</td><td>1 (asintótica)</td><td>$\mathcal O(h)$</td><td>1</td></tr>
+        <tr><td>$\Delta t$ fijo</td><td>$\mathcal O(\Delta t)$</td><td>0 (se estanca)</td><td>$\mathcal O(\Delta t)$</td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    La siguiente tabla se obtuvo ejecutando el código de la sección 11 ($\Delta t=(1/n)^2$, $n=4,8,16,32$):
+  </p>
+  <div class="tabla-wrap">
+    <table class="t num">
+      <thead><tr><th>$t$</th><th>$h$</th><th>$\Delta t$</th><th>ndof</th><th>$\|u-u_h\|_{0,\Omega}$</th><th>tasa</th><th>$|u-u_h|_{1,\Omega}$</th><th>tasa</th><th>$\|u-u_h\|_{1,\Omega}$</th><th>tasa</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="4">0.125</td><td>0.353553</td><td>6.25e-2</td><td>25</td><td>5.67593e-2</td><td>—</td><td>0.662787</td><td>—</td><td>0.665213</td><td>—</td></tr>
+        <tr><td>0.176777</td><td>1.5625e-2</td><td>81</td><td>1.62419e-2</td><td>1.805</td><td>0.366668</td><td>0.854</td><td>0.367028</td><td>0.858</td></tr>
+        <tr><td>0.0883883</td><td>3.90625e-3</td><td>289</td><td>4.23371e-3</td><td>1.940</td><td>0.189614</td><td>0.951</td><td>0.189661</td><td>0.952</td></tr>
+        <tr><td>0.0441942</td><td>9.76562e-4</td><td>1089</td><td>1.07156e-3</td><td>1.982</td><td>0.0958059</td><td>0.985</td><td>0.0958119</td><td>0.985</td></tr>
+        <tr><td rowspan="4">0.25</td><td>0.353553</td><td>6.25e-2</td><td>25</td><td>4.97062e-2</td><td>—</td><td>0.584438</td><td>—</td><td>0.586548</td><td>—</td></tr>
+        <tr><td>0.176777</td><td>1.5625e-2</td><td>81</td><td>1.43707e-2</td><td>1.790</td><td>0.323571</td><td>0.853</td><td>0.323890</td><td>0.857</td></tr>
+        <tr><td>0.0883883</td><td>3.90625e-3</td><td>289</td><td>3.75718e-3</td><td>1.935</td><td>0.167334</td><td>0.951</td><td>0.167376</td><td>0.952</td></tr>
+        <tr><td>0.0441942</td><td>9.76562e-4</td><td>1089</td><td>9.51887e-4</td><td>1.981</td><td>0.0845483</td><td>0.985</td><td>0.0845537</td><td>0.985</td></tr>
+        <tr><td rowspan="4">0.5</td><td>0.353553</td><td>6.25e-2</td><td>25</td><td>3.82200e-2</td><td>—</td><td>0.455048</td><td>—</td><td>0.456650</td><td>—</td></tr>
+        <tr><td>0.176777</td><td>1.5625e-2</td><td>81</td><td>1.11704e-2</td><td>1.775</td><td>0.251994</td><td>0.853</td><td>0.252241</td><td>0.856</td></tr>
+        <tr><td>0.0883883</td><td>3.90625e-3</td><td>289</td><td>2.93006e-3</td><td>1.931</td><td>0.130320</td><td>0.951</td><td>0.130353</td><td>0.952</td></tr>
+        <tr><td>0.0441942</td><td>9.76562e-4</td><td>1089</td><td>7.43126e-4</td><td>1.979</td><td>0.0658463</td><td>0.985</td><td>0.0658505</td><td>0.985</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    En los tres instantes las tasas tienden a $2$ en $L^2$ y a $1$ en $H^1$, de acuerdo con el Teorema 4. Los errores
+    disminuyen con $t$ porque la solución decae como $e^{-t}$ hacia $u_{\text{amb}}$. El <strong>error total</strong>
+    $\|u-u_h\|_{1,\Omega}=\big(\|u-u_h\|_{0,\Omega}^2+|u-u_h|_{1,\Omega}^2\big)^{1/2}$ (norma $H^1$ completa) queda dominado
+    por la parte $H^1$, de orden $\mathcal O(h+\Delta t)$, y converge con tasa $1$.
+  </p>
+</section>
+
+<!-- ================================================================
+     11. CÓDIGO
+     ================================================================ -->
+<p class="parte">PARTE II · COMPUTACIÓN</p>
+<section class="seccion" id="codigo">
+  <h2>11. Código completo en FreeFEM</h2>
+  <p>
+    El programa refina a la vez en espacio y en tiempo ($\Delta t=(1/n)^2\sim h^2$), ensambla y factoriza la matriz
+    $\frac1{\Delta t}M+A_K+R$ una sola vez por malla, avanza con Euler implícito y mide los errores en
+    $t=0.125,\ 0.25,\ 0.5$. Es el mismo código de la guía impresa, con la misma numeración de líneas, y fue
+    verificado en FreeFEM.
+  </p>
+  <div class="caja">
+    <div class="cab">Código: <span style="font-family:var(--mono);font-weight:500">calor_P1.edp</span></div>
+    <div class="cuerpo" style="padding:10px 0 0">
+      <div class="barra" style="padding:0 14px">
+        <button class="primario" type="button" data-copiar="fuente">Copiar código</button>
+        <button type="button" data-descargar="fuente">Descargar .edp</button>
+        <a class="btn" href="#laboratorio">Abrir en el laboratorio</a>
+        <span class="estado-copia" aria-live="polite"></span>
+      </div>
+      <pre class="codigo" id="codigo-resaltado" aria-label="Código FreeFEM"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- Fuente única del programa: se copia, descarga, resalta y ejecuta desde aquí -->
+<script type="text/plain" id="fuente">
+// =============================================================
+//  EPRIMA 2026 - Cursillo de Analisis Numerico de EDP
+//  Ecuacion del calor con condicion de Robin:
+//    rhoCp du/dt - div(K grad u) = f      en Omega x (0,T]
+//    (K grad u).n + hc u = g              sobre dOmega x (0,T]
+//    u(x,0) = u0(x)                       en Omega
+//  Euler implicito en tiempo y elementos finitos P1 en espacio
+// =============================================================
+
+// ---------- 1. Parametros fisicos ----------
+real rhoCp = 1.0;                // densidad por calor especifico
+real k1 = 1.0, k2 = 0.5;         // tensor K = diag(k1, k2)
+real hc = 2.0;                   // coeficiente de transferencia de calor
+real uamb = 1.0;                 // temperatura ambiente
+real T = 0.5;                    // tiempo final
+
+// ---------- 2. Solucion exacta y datos ----------
+real t = 0.;                     // tiempo actual (lo usan las func)
+func uex   = uamb + exp(-t)*sin(pi*x)*sin(pi*y);
+func dxuex = pi*exp(-t)*cos(pi*x)*sin(pi*y);
+func dyuex = pi*exp(-t)*sin(pi*x)*cos(pi*y);
+func f     = exp(-t)*((k1 + k2)*pi^2 - rhoCp)*sin(pi*x)*sin(pi*y);
+func g     = k1*dxuex*N.x + k2*dyuex*N.y + hc*uex;   // dato de Robin
+
+// ---------- 3. Parametros del experimento ----------
+int nref = 4;                    // numero de mallas
+int n    = 4;                    // subdivisiones por lado (malla inicial)
+real[int] tout = [0.125, 0.25, 0.5]; // instantes donde se mide el error
+int nout = tout.n;
+real[int] hmax(nref), dtv(nref);
+int[int] ndof(nref);                 // grados de libertad de cada malla
+real[int,int] errL2(nout, nref), errH1(nout, nref);
+
+// ---------- 4. Ciclo de refinamiento en espacio y tiempo ----------
+for (int i = 0; i < nref; i++) {
+    mesh Th = square(n, n);              // triangulacion de (0,1)^2
+    fespace Vh(Th, P1);                  // espacio de elementos finitos
+    fespace Ph(Th, P0);
+    Ph hK = hTriangle;
+    hmax[i] = hK[].max;
+    ndof[i] = Vh.ndof;
+
+    real dt = (1./n)^2;                  // paso de tiempo: dt = O(h^2)
+    int nt = int(T/dt + 0.5);            // numero de pasos de tiempo
+    dtv[i] = dt;
+
+    Vh uh, uold;
+    t = 0.;
+    uold = uex;                          // condicion inicial interpolada
+    real[int] isos(21);                  // escala de colores fija: la del dato
+    for (int j = 0; j < 21; j++)         // inicial, para ver el enfriamiento
+        isos[j] = uold[].min + j*(uold[].max - uold[].min)/20;
+
+    // Euler implicito: (M/dt + A_K + R) U^m = (M/dt) U^{m-1} + L^m
+    varf vA(u, v) = int2d(Th)( rhoCp/dt*u*v + k1*dx(u)*dx(v) + k2*dy(u)*dy(v) )
+                  + int1d(Th)( hc*u*v );
+    varf vM(u, v) = int2d(Th)( rhoCp/dt*u*v );
+    varf vL(u, v) = int2d(Th, qft = qf2pT)( f*v )   // cuadratura de orden 2,
+                  + int1d(Th, qfe = qf2pE)( g*v );  // suficiente para P1
+    matrix A = vA(Vh, Vh, solver = sparsesolver);   // se ensambla una sola vez
+    matrix M = vM(Vh, Vh);
+
+    int k = 0;                           // proximo instante de medicion
+    int cada = max(1, nt/16);            // cuadros de la animacion
+    for (int m = 1; m <= nt; m++) {
+        t = m*dt;                        // f y g se evaluan en t_m
+        real[int] b = vL(0, Vh);         // L^m: fuente y dato de Robin
+        b += M*uold[];                   // + (M/dt) U^{m-1}
+        uh[] = A^-1*b;                   // resuelve el sistema lineal
+        uold[] = uh[];
+
+        if (k < nout && abs(t - tout[k]) < dt/2) {
+            errL2(k, i) = sqrt( int2d(Th, qforder = 5)( (uh - uex)^2 ) );
+            errH1(k, i) = sqrt( int2d(Th, qforder = 5)( (dx(uh) - dxuex)^2
+                                                      + (dy(uh) - dyuex)^2 ) );
+            k++;
+        }
+        if (i == nref - 1 && m % cada == 0)
+            plot(uh, viso = isos, fill = true, value = true, wait = false,
+                 cmm = "Temperatura uh,  t = " + t);
+    }
+    n *= 2;                              // refina h y dt a la vez
+}
+
+// ---------- 5. Errores y tasas en cada instante ----------
+// Error total: norma H1 completa  ||e||_1 = sqrt( ||e||_0^2 + |e|_1^2 )
+func string celda(string s, int w) {     // alinea s a la derecha en w caracteres
+    string r = s;
+    while (r.length < w) r = " " + r;
+    return r;
+}
+func int columna(real e, real r, bool primera) {   // escribe "error  tasa"
+    cout.scientific; cout.precision(4);
+    cout << "  " << e;
+    if (primera) cout << celda("--", 7);
+    else { cout.fixed; cout.precision(3); cout << "  " << r; }
+    return 0;
+}
+string raya = "";
+for (int j = 0; j < 89; j++) raya = raya + "-";
+
+for (int k = 0; k < nout; k++) {
+    cout << endl << "Instante t = " << tout[k] << endl << raya << endl;
+    cout << celda("h", 12) << celda("dt", 12) << celda("ndof", 8)
+         << celda("err L2", 12) << celda("tasa", 7) << celda("err H1", 12)
+         << celda("tasa", 7) << celda("err total", 12) << celda("tasa", 7)
+         << endl << raya << endl;
+    for (int i = 0; i < nref; i++) {
+        real eT = sqrt(errL2(k, i)^2 + errH1(k, i)^2);
+        real rL2 = 0., rH1 = 0., rT = 0.;
+        if (i > 0) {
+            real eTa = sqrt(errL2(k, i-1)^2 + errH1(k, i-1)^2);
+            real lh = log(hmax[i-1]/hmax[i]);
+            rL2 = log(errL2(k, i-1)/errL2(k, i)) / lh;
+            rH1 = log(errH1(k, i-1)/errH1(k, i)) / lh;
+            rT  = log(eTa/eT) / lh;
+        }
+        string sn = ndof[i];
+        cout.scientific; cout.precision(4);
+        cout << "  " << hmax[i] << "  " << dtv[i] << celda(sn, 8);
+        columna(errL2(k, i), rL2, i == 0);
+        columna(errH1(k, i), rH1, i == 0);
+        columna(eT, rT, i == 0);
+        cout << endl;
+    }
+}
+</script>
+
+<script type="text/plain" id="fuente-disco">
+// =============================================================
+//  EPRIMA 2026 - Cursillo de Analisis Numerico de EDP
+//  Ecuacion del calor en un disco con condicion de Robin:
+//    rhoCp du/dt - div(K grad u) = 0      en Omega x (0,T]
+//    (K grad u).n + hc u = hc uamb        sobre dOmega x (0,T]
+//    u(x,0) = u0(x)                       en Omega
+//  Omega: disco unitario. Euler implicito + elementos finitos P1
+// =============================================================
+
+// ---------- 1. Parametros fisicos ----------
+real rho = 1., cp = 1.;          // densidad y calor especifico
+real rhoCp = rho*cp;
+real k1 = 5., k2 = 5.;           // tensor K = diag(k1, k2)
+real hc = 10.;                   // coeficiente de transferencia de calor
+real uamb = 20.;                 // temperatura ambiente
+real T = 0.5;                    // tiempo final (el equilibrio llega antes de t = 0.4)
+real dt = 0.002;                 // paso de tiempo (el foco se difunde muy rapido)
+func u0 = 50*exp(-10*((x - 0.5)^2 + (y - 0.5)^2));   // foco caliente
+
+// ---------- 2. Dominio y malla ----------
+border Gamma(s = 0, 2*pi) { x = cos(s); y = sin(s); label = 1; }
+mesh Th = buildmesh(Gamma(50));  // 50 puntos sobre la circunferencia
+fespace Vh(Th, P1);
+Vh uh, uold = u0;                // condicion inicial interpolada
+
+// ---------- 3. Matrices: se ensamblan una sola vez ----------
+// Euler implicito: (M/dt + A_K + R) U^m = (M/dt) U^{m-1} + L
+varf vA(u, v) = int2d(Th)( rhoCp/dt*u*v + k1*dx(u)*dx(v) + k2*dy(u)*dy(v) )
+              + int1d(Th, 1)( hc*u*v );
+varf vM(u, v) = int2d(Th)( rhoCp/dt*u*v );
+varf vL(u, v) = int1d(Th, 1)( hc*uamb*v );     // ley de Newton en el borde
+matrix A = vA(Vh, Vh, solver = sparsesolver);
+matrix M = vM(Vh, Vh);
+real[int] L = vL(0, Vh);                       // no depende del tiempo
+
+// Escala de colores fija, entre la temperatura minima y maxima posibles
+real umin = min(uold[].min, uamb), umax = max(uold[].max, uamb);
+real[int] isos(21);
+for (int j = 0; j < 21; j++)
+    isos[j] = umin + j*(umax - umin)/20;
+
+// ---------- 4. Marcha en el tiempo ----------
+int nt = int(T/dt + 0.5);
+plot(uold, viso = isos, fill = true, value = true, wait = false,
+     cmm = "Temperatura en el disco,  t = 0");
+for (int m = 1; m <= nt; m++) {
+    real[int] b = M*uold[];              // (M/dt) U^{m-1}
+    b += L;                              // + L
+    uh[] = A^-1*b;
+    uold[] = uh[];
+    if (m % 5 == 0)
+        plot(uh, viso = isos, fill = true, value = true, wait = false,
+             cmm = "Temperatura en el disco,  t = " + (m*dt));
+}
+
+// ---------- 5. Resumen ----------
+real area = int2d(Th)(1.);
+cout << "Area del disco discreto: " << area << " (pi = " << pi << ")" << endl;
+cout << "Temperatura media final: " << int2d(Th)(uh)/area << endl;
+cout << "Temperatura minima y maxima finales: " << uh[].min << "  " << uh[].max << endl;
+</script>
+
+<!-- ================================================================
+     12. ANATOMÍA
+     ================================================================ -->
+<section class="seccion" id="disco">
+  <h2>11.1 Variante: dominio circular</h2>
+  <p>
+    El mismo esquema funciona en dominios curvos. Aquí se resuelve el caso físico ($f=0$, $g=h\,u_{\text{amb}}$) en el
+    disco unitario, con $K=\operatorname{diag}(5,5)$, $h=10$, $u_{\text{amb}}=20$ y un foco caliente inicial
+    $u^0=50\,e^{-10\left((x-0.5)^2+(y-0.5)^2\right)}$. El borde se describe con <code class="in">border</code> y la malla
+    se genera con <code class="in">buildmesh</code>; la circunferencia queda aproximada por un polígono de 50 lados, por lo
+    que el área discreta ($\approx3.133$) difiere levemente de $\pi$: es el <em>error geométrico</em>, de orden $h^2$.
+  </p>
+  <p>
+    Como no hay solución exacta, no se miden errores: el programa muestra la evolución y un resumen final. El cuerpo,
+    inicialmente frío (cerca de $0$) salvo el foco, se calienta desde el borde mientras el foco se difunde, hasta
+    alcanzar el equilibrio $u\equiv u_{\text{amb}}$ que predice la Proposición 4. Con difusión y transferencia altas
+    ($k=5$, $h=10$) el equilibrio llega antes de $t=0.4$, por eso se simula hasta $T=0.5$.
+  </p>
+  <div class="caja">
+    <div class="cab">Código: <span style="font-family:var(--mono);font-weight:500">calor_disco.edp</span></div>
+    <div class="cuerpo" style="padding:10px 0 0">
+      <div class="barra" style="padding:0 14px">
+        <button class="primario" type="button" data-copiar="disco">Copiar código</button>
+        <button type="button" data-descargar="disco">Descargar .edp</button>
+        <button type="button" id="btn-abrir-disco">Abrir en el laboratorio</button>
+        <span class="estado-copia" aria-live="polite"></span>
+      </div>
+      <pre class="codigo" id="codigo-disco" aria-label="Código FreeFEM en el disco"></pre>
+    </div>
+  </div>
+</section>
+
+<section class="seccion" id="anatomia">
+  <h2>12. Del método al código</h2>
+  <div class="tabla-wrap">
+    <table class="t">
+      <thead><tr><th class="izq">Objeto teórico</th><th>Líneas</th><th class="izq">Instrucción FreeFEM</th><th class="izq">Comentario</th></tr></thead>
+      <tbody>
+        <tr><td class="izq">$\rho C_p$, $K=\operatorname{diag}(k_{x_1},k_{x_2})$, $h$, $u_{\text{amb}}$, $T$</td><td>11–15</td><td class="izq"><code class="in">real rhoCp, k1, k2, hc, uamb, T</code></td><td class="izq"><code class="in">hc</code> evita confundir $h$ con el tamaño de malla.</td></tr>
+        <tr><td class="izq">Tiempo actual $t$</td><td>18</td><td class="izq"><code class="in">real t</code></td><td class="izq">Las <code class="in">func</code> se evalúan con el valor vigente de <code class="in">t</code>.</td></tr>
+        <tr><td class="izq">Solución exacta y su gradiente</td><td>19–21</td><td class="izq"><code class="in">func uex, dxuex, dyuex</code></td><td class="izq">Solo para medir el error.</td></tr>
+        <tr><td class="izq">Fuente $f$ y dato de Robin $g$</td><td>22–23</td><td class="izq"><code class="in">func f, g</code></td><td class="izq"><code class="in">N.x</code>, <code class="in">N.y</code>: normal exterior en el borde.</td></tr>
+        <tr><td class="izq">Instantes de medición</td><td>28</td><td class="izq"><code class="in">real[int] tout</code></td><td class="izq">Deben ser múltiplos de $\Delta t$.</td></tr>
+        <tr><td class="izq">$\mathcal T_h$, $V_h$, $h=\max h_K$</td><td>36–41</td><td class="izq"><code class="in">square</code>, <code class="in">fespace</code>, <code class="in">hTriangle</code></td><td class="izq"></td></tr>
+        <tr><td class="izq">$\Delta t$ y número de pasos $N$</td><td>43–44</td><td class="izq"><code class="in">real dt = (1./n)^2; int nt</code></td><td class="izq">$\Delta t\sim h^2$ equilibra espacio y tiempo.</td></tr>
+        <tr><td class="izq">$u_h^0=I_hu^0$</td><td>49</td><td class="izq"><code class="in">uold = uex</code></td><td class="izq">Interpolación con $t=0$.</td></tr>
+        <tr><td class="izq">Escala de colores fija de la animación</td><td>50–52, 78</td><td class="izq"><code class="in">real[int] isos</code>; <code class="in">plot(uh, viso = isos, ...)</code></td><td class="izq">Sin ella FreeFEM reescala cada cuadro y el enfriamiento no se ve.</td></tr>
+        <tr><td class="izq">$\frac1{\Delta t}M+A_K+R$</td><td>55–56, 60</td><td class="izq"><code class="in">varf vA</code>, <code class="in">matrix A</code></td><td class="izq">Se factoriza una vez (<code class="in">sparsesolver</code>).</td></tr>
+        <tr><td class="izq">$\frac1{\Delta t}M$</td><td>57, 61</td><td class="izq"><code class="in">varf vM</code>, <code class="in">matrix M</code></td><td class="izq"></td></tr>
+        <tr><td class="izq">$\boldsymbol L^n$</td><td>58–59, 67</td><td class="izq"><code class="in">varf vL</code>; <code class="in">vL(0, Vh)</code></td><td class="izq">Integral de $f$ en $\Omega$ y de $g$ en $\partial\Omega$.</td></tr>
+        <tr><td class="izq">Lado derecho $\frac1{\Delta t}M\boldsymbol U^{n-1}+\boldsymbol L^n$</td><td>68</td><td class="izq"><code class="in">b += M*uold[]</code></td><td class="izq"><code class="in">uold[]</code>: vector de grados de libertad.</td></tr>
+        <tr><td class="izq">Solución del sistema</td><td>69</td><td class="izq"><code class="in">uh[] = A^-1*b</code></td><td class="izq">Usa la factorización ya calculada.</td></tr>
+        <tr><td class="izq">Error en un instante $t_n$</td><td>72–77</td><td class="izq"><code class="in">if (abs(t - tout[k]) &lt; dt/2)</code></td><td class="izq">Arreglos 2D <code class="in">errL2(k, i)</code>.</td></tr>
+        <tr><td class="izq">Error total $\|u-u_h\|_{1,\Omega}=\big(\|e\|_{0,\Omega}^2+|e|_{1,\Omega}^2\big)^{1/2}$</td><td>109</td><td class="izq"><code class="in">sqrt(errL2(k, i)^2 + errH1(k, i)^2)</code></td><td class="izq">Norma $H^1$ completa en cada instante.</td></tr>
+        <tr><td class="izq">Tasas $r_i$ en cada instante</td><td>85–126</td><td class="izq"><code class="in">log(errL2(k, i-1)/errL2(k, i)) / lh</code></td><td class="izq"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Algoritmo <span class="nota">(Euler implícito + MEF $\mathbb P_1$ con estudio de convergencia)</span></div>
+    <div class="cuerpo">
+      <p style="margin:0 0 6px"><strong>Entrada:</strong> datos físicos, solución exacta, instantes de medición, número de mallas.
+      <strong>Salida:</strong> errores y tasas en cada instante; animación de $u_h$.</p>
+      <ol class="pasos">
+        <li>Definir parámetros físicos, la solución exacta, $f$ y $g$ como funciones de $(x,y,t)$.</li>
+        <li>Para cada malla $n=n_0,2n_0,\dots$: construir $\mathcal T_h$, $V_h$ y calcular $h$.</li>
+        <li>Elegir $\Delta t=(1/n)^2$ y $N=T/\Delta t$; interpolar la condición inicial $u_h^0$.</li>
+        <li>Ensamblar y factorizar $\frac1{\Delta t}M+A_K+R$; ensamblar $\frac1{\Delta t}M$.</li>
+        <li>Para $n=1,\dots,N$: actualizar $t=t_n$ y ensamblar $\boldsymbol L^n$.</li>
+        <li>Formar $\boldsymbol b=\frac1{\Delta t}M\boldsymbol U^{n-1}+\boldsymbol L^n$ y resolver para $\boldsymbol U^n$.</li>
+        <li>Si $t_n$ es un instante de medición, calcular los errores en $L^2$ y $H^1$.</li>
+        <li>En la malla más fina, dibujar $u_h^n$ cada cierto número de pasos con una escala de colores fija.</li>
+        <li>Al terminar, calcular y reportar las tasas $r_i$ para cada instante.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     13. LABORATORIO
+     ================================================================ -->
+<section class="seccion" id="laboratorio">
+  <h2>13. Laboratorio en línea</h2>
+  <p>
+    El laboratorio ejecuta <strong>FreeFEM JS</strong> (FreeFEM v3.5 compilado a JavaScript por Antoine Le Hyaric) en su
+    navegador. Al terminar se muestran la <strong>animación de la temperatura</strong>, las tablas de errores y tasas en
+    cada instante y su gráfico log–log. La primera ejecución descarga el motor (≈ 17,7 MB). FreeFEM calcula en un
+    proceso aparte, por lo que la página sigue respondiendo: se muestra el tiempo estimado y el cálculo puede
+    detenerse en cualquier momento con <em>■ Detener</em> o recargando la página (F5).
+    La configuración por defecto tarda unos segundos; para mallas más finas (por ejemplo,
+    <code class="in">nref = 6</code>) use FreeFEM de escritorio.
+  </p>
+
+  <div class="barra">
+    <button class="primario" type="button" id="btn-ejecutar">▶ Ejecutar</button>
+    <button type="button" id="btn-dth">Variante $\Delta t\sim h$</button>
+    <button type="button" id="btn-disco">Dominio circular</button>
+    <button type="button" id="btn-fisico">Caso físico</button>
+    <button type="button" id="btn-restaurar">Restaurar código</button>
+    <button type="button" data-copiar="editor">Copiar</button>
+    <button type="button" data-descargar="editor">Descargar .edp</button>
+    <span class="estado-copia" aria-live="polite"></span>
+  </div>
+
+  <div class="lab-grid">
+    <div class="caja" style="margin:0">
+      <div class="cab">Editor</div>
+      <div class="cuerpo" style="padding:0">
+        <textarea class="editor" id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Editor de código FreeFEM"></textarea>
+      </div>
+    </div>
+    <div class="caja" style="margin:0; align-self:start">
+      <div class="cab">Temperatura $u_h$</div>
+      <div class="cuerpo" style="padding:0">
+        <div class="lienzo-wrap"><canvas id="ffjs-canvas"></canvas></div>
+        <div class="reproductor">
+          <button type="button" id="btn-play" disabled aria-label="Reproducir animación">▶</button>
+          <input type="range" id="cuadro" min="0" max="0" value="0" disabled aria-label="Cuadro de la animación">
+          <span id="cuadro-txt">—</span>
+        </div>
+        <div class="estado" id="estado" style="padding:6px 12px 8px" aria-live="polite">Listo para ejecutar.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Errores y tasas de convergencia en cada instante</div>
+    <div class="cuerpo">
+      <div class="res-grid" id="resultados">
+        <div class="vacio">Ejecute el código para ver las tablas y el gráfico log–log.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div class="cab">Consola de FreeFEM</div>
+    <div class="cuerpo" style="padding:0">
+      <pre class="consola" id="consola">(sin salida)</pre>
+    </div>
+  </div>
+
+  <div class="caja gris">
+    <div class="cab">Actividades sugeridas</div>
+    <div class="cuerpo">
+      <ul class="vinetas" style="margin:0">
+        <li>Compare las tasas en los tres instantes: ¿dependen de $t$?</li>
+        <li>En la animación del problema de verificación la forma de $u_h$ no cambia y solo se enfría. ¿Por qué? (Observe que $u-u_{\text{amb}}=e^{-t}\sin(\pi x)\sin(\pi y)$ separa variables.)</li>
+        <li>Pulse <em>Variante $\Delta t\sim h$</em> (usa $\Delta t=1/n$ y mallas $n=8,\dots,64$). ¿Cómo evoluciona la tasa en $L^2$? Explique con $\mathcal O(h^2+\Delta t)$.</li>
+        <li>Pulse <em>Caso físico</em> ($f=0$, $g=h\,u_{\text{amb}}$, foco caliente inicial) y observe la animación: ¿hacia qué temperatura evoluciona el cuerpo? (Proposición 4).</li>
+        <li>Pulse <em>Dominio circular</em>: el cuerpo, frío salvo un foco, se calienta desde el borde hasta $u_{\text{amb}}=20$. Pruebe con $h=1$: ¿cuánto más tarda en llegar al equilibrio?</li>
+        <li>Cambie <code class="in">k2</code> a $0.1$ en el caso físico: ¿cómo se refleja la anisotropía de $K$ en la forma de las isotermas?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     14. EJECUCIÓN LOCAL
+     ================================================================ -->
+<section class="seccion" id="local">
+  <h2>14. Ejecución local con FreeFEM++</h2>
+  <ol class="pasos">
+    <li>Instale FreeFEM desde <a href="https://freefem.org" target="_blank" rel="noopener">freefem.org</a>.</li>
+    <li>Guarde el código con <em>Descargar .edp</em> como <code class="in">calor_P1.edp</code>.</li>
+    <li>Ejecútelo con <code class="in">FreeFem++ calor_P1.edp</code>: la ventana gráfica muestra la evolución en tiempo real
+        (gracias a <code class="in">wait = false</code>) y la consola, las tablas de errores y tasas.</li>
+  </ol>
+  <p>
+    En la versión de escritorio el cálculo tarda pocos segundos, lo que permite aumentar <code class="in">nref</code> a 5
+    o el tiempo final <code class="in">T</code>.
+  </p>
+</section>
+</main>
+</div>
+
+<footer>
+  <div class="pie-in">
+    <p class="org">ORGANIZAN Y PATROCINAN</p>
+    <div class="logos">
+      <img src="logos/logo_ubb.png" alt="Universidad del Bío-Bío">
+      <img src="logos/logo_vrip.png" class="ancho" alt="Vicerrectoría de Investigación y Postgrado, UBB">
+      <img src="logos/logo_doctorado.png" alt="Doctorado en Matemática Aplicada">
+      <img src="logos/logo_magister.png" alt="Magíster en Matemática Aplicada">
+    </div>
+    <div class="pie-texto">
+      <span>Universidad del Bío-Bío</span>
+      <span>Escuela de Primavera en Matemática Aplicada · 2026</span>
+    </div>
+  </div>
+  <div class="banda-final"></div>
+</footer>
+
+<script>
+/* =====================================================================
+   Utilidades: código fuente, resaltado, copiar y descargar
+   ===================================================================== */
+const FUENTE = document.getElementById('fuente').textContent.replace(/^\n/, '');
+const FUENTE_DISCO = document.getElementById('fuente-disco').textContent.replace(/^\n/, '');
+const editor = document.getElementById('editor');
+editor.value = FUENTE;
+let modoFisico = false;
+
+const KW1 = new Set(['for','if','else','while','break','continue','return','solve','problem','varf','macro','func','include','load']);
+const KW2 = new Set(['int','real','bool','string','complex','mesh','mesh3','fespace','matrix']);
+const KW3 = new Set(['square','buildmesh','border','int2d','int1d','on','plot','cout','endl','sqrt','log','sin','cos','exp',
+                     'dx','dy','P0','P1','P2','hTriangle','sparsesolver','qforder','qft','qfe','qf2pT','qf2pE','ndof','pi','max','abs','N']);
+
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function resaltarLinea(linea) {
+  let out = '', i = 0;
+  while (i < linea.length) {
+    const resto = linea.slice(i);
+    let m;
+    if (resto.startsWith('//')) { out += '<span class="tk-c">' + esc(resto) + '</span>'; break; }
+    if ((m = resto.match(/^"(?:[^"\\]|\\.)*"/))) { out += '<span class="tk-s">' + esc(m[0]) + '</span>'; i += m[0].length; continue; }
+    if ((m = resto.match(/^\d+\.?\d*(?:[eE][+-]?\d+)?/))) { out += '<span class="tk-n">' + m[0] + '</span>'; i += m[0].length; continue; }
+    if ((m = resto.match(/^[A-Za-z_]\w*/))) {
+      const w = m[0];
+      const c = KW1.has(w) ? 'tk-k1' : KW2.has(w) ? 'tk-k2' : KW3.has(w) ? 'tk-k3' : '';
+      out += c ? '<span class="' + c + '">' + w + '</span>' : w;
+      i += w.length; continue;
+    }
+    out += esc(linea[i]); i++;
+  }
+  return out;
+}
+document.getElementById('codigo-resaltado').innerHTML =
+  FUENTE.replace(/\n$/, '').split('\n').map(l => '<span class="l">' + (resaltarLinea(l) || ' ') + '</span>').join('');
+
+document.getElementById('codigo-disco').innerHTML =
+  FUENTE_DISCO.replace(/\n$/, '').split('\n').map(l => '<span class="l">' + (resaltarLinea(l) || ' ') + '</span>').join('');
+function textoDe(origen) { return origen === 'editor' ? editor.value : origen === 'disco' ? FUENTE_DISCO : FUENTE; }
+function nombreArchivo(origen) { return /buildmesh/.test(textoDe(origen)) ? 'calor_disco.edp' : 'calor_P1.edp'; }
+async function copiar(texto) {
+  try { await navigator.clipboard.writeText(texto); return true; }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e2) {}
+    ta.remove(); return ok;
+  }
+}
+function avisar(boton, msg) {
+  const span = boton.parentElement.querySelector('.estado-copia');
+  if (!span) return;
+  span.textContent = msg;
+  clearTimeout(span._t); span._t = setTimeout(() => { span.textContent = ''; }, 2200);
+}
+document.querySelectorAll('[data-copiar]').forEach(b => b.addEventListener('click', async () => {
+  avisar(b, (await copiar(textoDe(b.dataset.copiar))) ? '✓ Copiado' : 'No se pudo copiar');
+}));
+document.querySelectorAll('[data-descargar]').forEach(b => b.addEventListener('click', () => {
+  const blob = new Blob([textoDe(b.dataset.descargar)], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = nombreArchivo(b.dataset.descargar);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  avisar(b, '✓ Descargado');
+}));
+editor.addEventListener('keydown', e => {
+  if (e.key === 'Tab') { e.preventDefault(); editor.setRangeText('    ', editor.selectionStart, editor.selectionEnd, 'end'); }
+});
+
+/* Variantes del laboratorio (reemplazos sobre el código original) */
+function aplicar(reemplazos) {
+  let c = FUENTE;
+  for (const [a, b] of reemplazos) c = c.replace(a, b);
+  editor.value = c; editor.focus();
+}
+document.getElementById('btn-restaurar').addEventListener('click', () => { modoFisico = false; editor.value = FUENTE; });
+document.getElementById('btn-dth').addEventListener('click', () => {
+  modoFisico = false;
+  aplicar([
+    ['int n    = 4; ', 'int n    = 8; '],
+    ['real dt = (1./n)^2;                  // paso de tiempo: dt = O(h^2)',
+     'real dt = 1./n;                      // paso de tiempo: dt = O(h)']
+  ]);
+});
+function cargarDisco() { modoFisico = true; editor.value = FUENTE_DISCO; }
+document.getElementById('btn-disco').addEventListener('click', () => { cargarDisco(); editor.focus(); });
+document.getElementById('btn-abrir-disco').addEventListener('click', () => {
+  cargarDisco(); document.getElementById('laboratorio').scrollIntoView({ behavior: 'smooth' });
+});
+document.getElementById('btn-fisico').addEventListener('click', () => {
+  modoFisico = true;
+  aplicar([
+    ['real T = 0.5;   ', 'real T = 1.0;   '],
+    ['func f     = exp(-t)*((k1 + k2)*pi^2 - rhoCp)*sin(pi*x)*sin(pi*y);', 'func f     = 0.;                                  // sin fuente'],
+    ['func g     = k1*dxuex*N.x + k2*dyuex*N.y + hc*uex;   // dato de Robin', 'func g     = hc*uamb;                               // ambiente a uamb'],
+    ['int nref = 4; ', 'int nref = 1; '],
+    ['int n    = 4; ', 'int n    = 24;'],
+    ['real[int] tout = [0.125, 0.25, 0.5];', 'real[int] tout = [0.5, 1.0, 1.5];  '],
+    ['real dt = (1./n)^2;                  // paso de tiempo: dt = O(h^2)',
+     'real dt = 1./128;                    // paso de tiempo fijo'],
+    ['uold = uex;                          // condicion inicial interpolada',
+     'uold = uamb + 3*exp(-30*((x-0.35)^2 + (y-0.6)^2));   // foco caliente'],
+    ['int cada = max(1, nt/16); ', 'int cada = max(1, nt/30); '],
+    ['    n *= 2;                              // refina h y dt a la vez',
+     '    cout << "Temperatura media final: " << int2d(Th)(uh)/int2d(Th)(1.) << endl;\n' +
+     '    cout << "Temperatura minima y maxima finales: " << uh[].min << "  " << uh[].max << endl;\n' +
+     '    n *= 2;                              // refina h y dt a la vez']
+  ]);
+});
+
+/* =====================================================================
+   FreeFEM JS se ejecuta dentro de un iframe aislado (sandbox sin
+   allow-same-origin). El navegador lo corre en otro proceso, así que la
+   página sigue respondiendo mientras calcula: se puede detener el cálculo
+   (se elimina el iframe) o recargar con F5. Un Web Worker no sirve porque
+   el motor compilado excede la pila de los Workers.
+   Cada plot() se graba en el iframe como un cuadro (lista de operaciones
+   de dibujo) y se envía a la página, que lo dibuja y arma la animación.
+   ===================================================================== */
+const PUENTE = `<!DOCTYPE html><html><head><meta charset="utf-8"><script>
+var ESCALA = 10, actual = null, cadena = '';
+function enviar(m) { parent.postMessage(m, '*'); }
+function cerrarCuadro() { if (actual && actual.length) enviar({ tipo: 'cuadro', ops: actual }); actual = null; }
+self.ffjs_add_stdout = function (t) { enviar({ tipo: 'linea', texto: String(t) }); };
+self.ffjs_add_stderr = function (t) { enviar({ tipo: 'linea', texto: String(t) }); };
+self.ffjs_graphs = [''];
+self.ffjs_files_data = [];
+self.ffjs_listgraphs = function () {};
+self.ffjs_graphstart = function () { cerrarCuadro(); actual = []; };
+self.ffjs_graphdone = function () { cerrarCuadro(); };
+self.ffjs_couleur = function (r, g, b) { if (actual) actual.push(['c', 'rgb(' + Math.floor(r * 255) + ',' + Math.floor(g * 255) + ',' + Math.floor(b * 255) + ')']); };
+self.ffjs_rmoveto = function (x, y) { if (actual) actual.push(['m', x / ESCALA, y / ESCALA]); };
+self.ffjs_rlineto = function (x, y) { if (actual) actual.push(['l', x / ESCALA, y / ESCALA]); };
+self.ffjs_plotstring = function (c) {
+  if (!actual) return;
+  if (c) cadena += String.fromCharCode(c); else { actual.push(['s', cadena]); cadena = ''; }
+};
+self.ffjs_penthickness = function (p) { if (actual) actual.push(['w', p]); };
+self.ffjs_fillpoly_begin = function (x, y) { if (actual) actual.push(['pb', x / ESCALA, y / ESCALA]); };
+self.ffjs_fillpoly_next = function (x, y) { if (actual) actual.push(['pn', x / ESCALA, y / ESCALA]); };
+self.ffjs_fillpoly_close = function () { if (actual) actual.push(['pc']); };
+function cargar(src) {
+  var s = document.createElement('script');
+  s.src = src;
+  s.onload = function () { enviar({ tipo: 'listo', ok: typeof ffjs_callcxx === 'function' }); };
+  s.onerror = function () { enviar({ tipo: 'listo', ok: false }); };
+  document.head.appendChild(s);
+}
+onmessage = function (e) {
+  var d = e.data || {};
+  if (d.tipo === 'motor') cargar(URL.createObjectURL(new Blob([d.codigo], { type: 'text/javascript' })));
+  else if (d.tipo === 'motorURL') cargar(d.url);
+  else if (d.tipo === 'ejecutar') {
+    var err = null, t0 = Date.now();
+    try { ffjs_callcxx(d.codigo); } catch (x) { err = String((x && x.message) || x).slice(0, 200); }
+    cerrarCuadro();
+    enviar({ tipo: 'fin', err: err, seg: (Date.now() - t0) / 1000 });
+  }
+};
+<\/script></head><body></body></html>`;
+
+const lienzo = document.getElementById('ffjs-canvas');
+lienzo.width = 1000; lienzo.height = Math.round(1000 / Math.SQRT2);
+const ctx = lienzo.getContext('2d');
+let salida = [], cuadros = [];
+
+function dibujarCuadro(ops) {
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+  ctx.font = '17px Fira Sans, Arial, sans-serif'; ctx.lineWidth = 1;
+  let px = 0, py = 0;
+  for (const op of ops) {
+    switch (op[0]) {
+      case 'c': ctx.strokeStyle = op[1]; ctx.fillStyle = op[1]; break;
+      case 'm': px = op[1]; py = op[2]; break;
+      case 'l': ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(op[1], op[2]); ctx.stroke(); px = op[1]; py = op[2]; break;
+      case 's': ctx.fillText(op[1], px, py); break;
+      case 'w': ctx.lineWidth = op[1]; break;
+      case 'pb': ctx.beginPath(); ctx.moveTo(op[1], op[2]); break;
+      case 'pn': ctx.lineTo(op[1], op[2]); break;
+      case 'pc': ctx.fill(); break;
+    }
+  }
+}
+
+/* Reproductor de la animación */
+const btnPlay = document.getElementById('btn-play');
+const deslizador = document.getElementById('cuadro');
+const cuadroTxt = document.getElementById('cuadro-txt');
+let reproduciendo = null;
+function mostrarCuadro(i) {
+  if (!cuadros.length) return;
+  deslizador.value = i; dibujarCuadro(cuadros[i]);
+  cuadroTxt.textContent = (i + 1) + ' / ' + cuadros.length;
+}
+function detener() { clearInterval(reproduciendo); reproduciendo = null; btnPlay.textContent = '▶'; btnPlay.setAttribute('aria-label', 'Reproducir animación'); }
+function reproducir() {
+  if (cuadros.length < 2) return;
+  btnPlay.textContent = '❚❚'; btnPlay.setAttribute('aria-label', 'Pausar animación');
+  let i = Number(deslizador.value);
+  if (i >= cuadros.length - 1) i = -1;
+  reproduciendo = setInterval(() => {
+    i++;
+    if (i >= cuadros.length) { detener(); return; }
+    mostrarCuadro(i);
+  }, 220);
+}
+btnPlay.addEventListener('click', () => (reproduciendo ? detener() : reproducir()));
+deslizador.addEventListener('input', () => { detener(); mostrarCuadro(Number(deslizador.value)); });
+function habilitarReproductor() {
+  const hay = cuadros.length > 0;
+  btnPlay.disabled = cuadros.length < 2; deslizador.disabled = !hay;
+  deslizador.max = Math.max(0, cuadros.length - 1);
+  if (hay) { mostrarCuadro(0); reproducir(); } else { cuadroTxt.textContent = '—'; }
+}
+
+/* Motor: se descarga una vez en la página y se entrega al iframe. Si el archivo puede
+   leerse como texto (copia local en vendor/ o servidor con CORS) se amplía su memoria de
+   16 MB a 128 MB; si no, el iframe lo carga tal cual desde freefem.org. */
+const FUENTES_MOTOR = ['vendor/freefem-js-compiled.js', 'https://freefem.org/js/freefem-js-compiled.js'];
+const MEMORIA_ORIGINAL = 'ob.TOTAL_MEMORY||16777216';
+const MEMORIA_AMPLIADA = 'ob.TOTAL_MEMORY||134217728';
+let motorTexto = null, memoriaAmpliada = false;
+async function obtenerMotor() {
+  if (motorTexto !== null) return;
+  for (const src of FUENTES_MOTOR) {
+    try {
+      const r = await fetch(src);
+      if (!r.ok) continue;
+      motorTexto = (await r.text()).replace(MEMORIA_ORIGINAL, MEMORIA_AMPLIADA);
+      memoriaAmpliada = true;
+      return;
+    } catch (e) { /* probar la siguiente */ }
+  }
+  motorTexto = '';                     // vacío: el iframe usará la URL de freefem.org
+}
+
+let marco = null, marcoListo = null, alListo = null;
+function crearMarco() {
+  marco = document.createElement('iframe');
+  marco.setAttribute('sandbox', 'allow-scripts');
+  marco.setAttribute('aria-hidden', 'true');
+  marco.title = 'Motor FreeFEM JS';
+  // visible pero diminuto: un iframe con display:none recibe menos prioridad y calcula más lento
+  Object.assign(marco.style, { position: 'fixed', right: '0', bottom: '0', width: '1px', height: '1px',
+                               border: '0', opacity: '0.01', pointerEvents: 'none' });
+  marco.srcdoc = PUENTE;
+  marcoListo = new Promise((res, rej) => {
+    alListo = ok => (ok ? res() : rej(new Error('No se pudo cargar FreeFEM JS. Revise su conexión a internet.')));
+    marco.onload = () => marco.contentWindow.postMessage(
+      motorTexto ? { tipo: 'motor', codigo: motorTexto } : { tipo: 'motorURL', url: FUENTES_MOTOR[FUENTES_MOTOR.length - 1] }, '*');
+  });
+  document.body.appendChild(marco);
+  return marcoListo;
+}
+function destruirMarco() { if (marco) marco.remove(); marco = null; marcoListo = null; alListo = null; }
+
+const estado = document.getElementById('estado');
+const consola = document.getElementById('consola');
+const btnEjecutar = document.getElementById('btn-ejecutar');
+function ponerEstado(msg, tipo) { estado.textContent = msg; estado.className = 'estado' + (tipo ? ' ' + tipo : ''); }
+
+/* Estimación del tiempo de cálculo: suma sobre mallas de (pasos de tiempo) x (gdl).
+   Calibración: la configuración por defecto (~6e5 unidades) tarda ~5 s. */
+const UNIDADES_POR_SEGUNDO = 1e5;
+function estimarSegundos(code) {
+  const num = re => { const m = code.match(re); return m ? Number(m[1]) : null; };
+  const nref = num(/\bint\s+nref\s*=\s*(\d+)/), n0 = num(/\bint\s+n\s*=\s*(\d+)/), T = num(/\breal\s+T\s*=\s*([0-9.eE+-]+)/);
+  const dtExpr = (code.match(/\breal\s+dt\s*=\s*([^;]+);/) || [])[1];
+  if (!nref || !n0 || !T || !dtExpr || !/^[0-9n.\s+\-*/()^]+$/.test(dtExpr)) return null;
+  let dtDe;
+  try { dtDe = new Function('n', 'return ' + dtExpr.replace(/\^/g, '**') + ';'); } catch (e) { return null; }
+  const k = /fespace\s+Vh\s*\(\s*Th\s*,\s*P2\s*\)/.test(code) ? 2 : 1;
+  const factor = /\bn\s*\*=\s*2\b/.test(code) ? 2 : 1;
+  let n = n0, trabajo = 0;
+  for (let i = 0; i < nref; i++) {
+    const dt = dtDe(n);
+    if (!(dt > 0)) return null;
+    trabajo += Math.round(T / dt) * Math.pow(k * n + 1, 2) * (k === 2 ? 2.5 : 1);
+    n *= factor;
+  }
+  return 1 + trabajo / UNIDADES_POR_SEGUNDO;
+}
+function formatoDuracion(s) {
+  if (s < 90) return Math.round(s) + ' s';
+  if (s < 5400) return Math.round(s / 60) + ' min';
+  return (s / 3600).toFixed(1) + ' h';
+}
+
+/* Mensajes del iframe */
+let ejecutando = false, avisoCalculo = '';
+addEventListener('message', e => {
+  if (!marco || e.source !== marco.contentWindow) return;
+  const d = e.data || {};
+  if (d.tipo === 'listo') { if (alListo) alListo(d.ok); }
+  else if (d.tipo === 'linea') {
+    salida.push(d.texto);
+    consola.textContent += d.texto + '\n';
+    consola.scrollTop = consola.scrollHeight;
+  } else if (d.tipo === 'cuadro') {
+    cuadros.push(d.ops);               // el navegador los entrega al terminar el cálculo
+  } else if (d.tipo === 'fin') finalizar(d.err, d.seg);
+});
+
+function modoBoton(calculando) {
+  ejecutando = calculando;
+  btnEjecutar.textContent = calculando ? '■ Detener' : '▶ Ejecutar';
+  btnEjecutar.setAttribute('aria-label', calculando ? 'Detener la ejecución' : 'Ejecutar el código');
+}
+
+async function ejecutar() {
+  if (ejecutando) { detenerEjecucion(); return; }
+  modoBoton(true); detener();
+  salida = []; cuadros = [];
+  consola.textContent = '';
+  btnPlay.disabled = true; deslizador.disabled = true; cuadroTxt.textContent = '—';
+  const est = estimarSegundos(editor.value);
+  try {
+    if (motorTexto === null) { ponerEstado('Descargando el motor FreeFEM JS (≈ 17,7 MB)…'); await obtenerMotor(); }
+    if (!ejecutando) return;
+    if (!marco) { ponerEstado('Preparando FreeFEM JS…'); await crearMarco(); }
+    if (!ejecutando) return;
+    avisoCalculo = 'Calculando' + (est !== null ? ' (estimado ≈ ' + formatoDuracion(est) + ')' : '') +
+                   '. Puede detenerlo con ■ Detener o recargar con F5';
+    ponerEstado(avisoCalculo);
+    marco.contentWindow.postMessage({ tipo: 'ejecutar', codigo: editor.value }, '*');
+  } catch (e) {
+    destruirMarco(); modoBoton(false);
+    ponerEstado(e.message, 'err');
+  }
+}
+
+function detenerEjecucion() {
+  destruirMarco();                    // el navegador termina el proceso del iframe
+  modoBoton(false);
+  habilitarReproductor();
+  ponerEstado('Ejecución detenida' + (cuadros.length ? ': se muestran los ' + cuadros.length + ' cuadros calculados.' : '.'), 'err');
+}
+
+/* Caso físico y disco: no hay solución exacta; se resume el estado final y se explica el equilibrio */
+function mostrarResumenFisico(texto) {
+  const lineas = texto.split('\n').map(l => l.trim()).filter(l => /^(Temperatura|Area)/.test(l));
+  const amb = Number((editor.value.match(/real\s+uamb\s*=\s*([0-9.eE+-]+)/) || [])[1]);
+  const mm = texto.match(/Temperatura minima y maxima finales:\s*([-0-9.eE+]+)\s+([-0-9.eE+]+)/);
+  let html = '<div class="vacio" style="text-align:left">No hay solución exacta, así que no se calculan errores.';
+  if (lineas.length) html += '<br><br><strong>Estado final:</strong><br>' + lineas.map(esc).join('<br>');
+  if (mm && isFinite(amb)) {
+    const desvio = Math.max(Math.abs(Number(mm[1]) - amb), Math.abs(Number(mm[2]) - amb));
+    html += '<br><br>' + (desvio <= 0.01 * Math.max(1, Math.abs(amb))
+      ? 'Todo el cuerpo alcanzó la temperatura ambiente u<sub>amb</sub> = ' + amb + ' (desviación máxima ' + desvio.toExponential(1) +
+        '): es el <strong>equilibrio térmico</strong> que predice la Proposición 4, pues u − u<sub>amb</sub> decae exponencialmente. ' +
+        'Por eso los últimos cuadros de la animación son de un solo color.'
+      : 'El cuerpo aún no alcanza la temperatura ambiente u<sub>amb</sub> = ' + amb + ' (desviación máxima ' + desvio.toPrecision(3) +
+        '): aumente T para observar el equilibrio.');
+  }
+  document.getElementById('resultados').innerHTML = html + '</div>';
+}
+
+function finalizar(err, seg) {
+  modoBoton(false);
+  const texto = salida.join('\n');
+  if (!texto) consola.textContent = '(sin salida)';
+  habilitarReproductor();
+
+  if (modoFisico) {
+    mostrarResumenFisico(texto);
+  } else {
+    mostrarResultados(extraerGrupos(texto));
+  }
+
+  if (/Cannot enlarge memory arrays/.test(texto)) {
+    destruirMarco();                  // el motor queda inutilizable tras agotar la memoria
+    ponerEstado('FreeFEM JS se quedó sin memoria' + (memoriaAmpliada ? '' : ' (16 MB)') + ': reduzca nref o el número de pasos.', 'err');
+  } else if (err || !/Normal End/.test(texto)) {
+    destruirMarco();
+    ponerEstado('FreeFEM terminó con errores: revise la consola.' + (err ? ' (' + err + ')' : ''), 'err');
+  } else {
+    ponerEstado('Ejecución completada en ' + seg.toFixed(1) + ' s · ' + cuadros.length + ' cuadros de animación.', 'ok');
+  }
+}
+btnEjecutar.addEventListener('click', ejecutar);
+
+/* Bloques "Instante t = ..." seguidos de filas: h, dt, ndof, errL2, tasaL2, errH1, tasaH1,
+   errTotal, tasaTotal ("--" en la primera tasa). Internamente cada fila queda como
+   [h, dt, errL2, tasaL2, errH1, tasaH1, ndof, errTotal, tasaTotal]. */
+function extraerGrupos(texto) {
+  const grupos = [];
+  let g = null;
+  const numero = v => v === '--' || /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(v);
+  for (const l of texto.split('\n')) {
+    const mt = l.match(/^\s*(?:Instante\s+)?t\s*=\s*([-+0-9.eE]+)\s*$/);
+    if (mt) { g = { t: Number(mt[1]), filas: [] }; grupos.push(g); continue; }
+    const p = l.trim().split(/\s+/);
+    if (g && p.length === 9 && p.every(numero)) {
+      const v = p.map(x => (x === '--' ? NaN : Number(x)));
+      g.filas.push([v[0], v[1], v[3], v[4], v[5], v[6], v[2], v[7], v[8]]);
+    }
+  }
+  return grupos.filter(x => x.filas.length);
+}
+function fmt(v, d) { return Math.abs(v) < 1e-3 ? v.toExponential(d - 1) : v.toPrecision(d); }
+
+const TONOS_L2 = ['#7f9bb5', '#3e6489', '#1B3A57'];
+const TONOS_H1 = ['#9cc3e0', '#5f9cc9', '#3D7AA8'];
+function mostrarResultados(grupos) {
+  const cont = document.getElementById('resultados');
+  if (!grupos.length) { cont.innerHTML = '<div class="vacio">No se encontraron tablas de errores en la salida.</div>'; return; }
+  let html = '<div class="tabla-wrap" style="margin:0"><table class="t num"><thead><tr>' +
+    '<th>t</th><th>h</th><th>Δt</th><th>ndof</th><th>error L²</th><th>tasa</th><th>error H¹</th><th>tasa</th><th>error total</th><th>tasa</th></tr></thead><tbody>';
+  grupos.forEach(g => {
+    g.filas.forEach((f, i) => {
+      html += '<tr>' + (i === 0 ? '<td rowspan="' + g.filas.length + '">' + g.t + '</td>' : '') +
+        '<td>' + fmt(f[0], 4) + '</td><td>' + fmt(f[1], 3) + '</td><td>' + f[6] + '</td><td>' + fmt(f[2], 4) + '</td><td>' +
+        (i ? f[3].toFixed(3) : '—') + '</td><td>' + fmt(f[4], 4) + '</td><td>' + (i ? f[5].toFixed(3) : '—') +
+        '</td><td>' + fmt(f[7], 4) + '</td><td>' + (i ? f[8].toFixed(3) : '—') + '</td></tr>';
+    });
+  });
+  html += '</tbody></table></div><div>' + graficoLogLog(grupos) + '<div class="leyenda">' +
+    grupos.map((g, k) => '<span><i style="background:' + TONOS_L2[k % 3] + '"></i>L², t = ' + g.t + '</span>').join('') +
+    grupos.map((g, k) => '<span><i style="background:repeating-linear-gradient(90deg,' + TONOS_H1[k % 3] + ' 0 6px,transparent 6px 9px)"></i>H¹, t = ' + g.t + '</span>').join('') +
+    '</div></div>';
+  cont.innerHTML = html;
+}
+
+function graficoLogLog(grupos) {
+  const W = 520, H = 320, m = { l: 62, r: 16, t: 14, b: 40 };
+  const filas = grupos.flatMap(g => g.filas);
+  const hs = filas.map(f => f[0]), es = filas.flatMap(f => [f[2], f[4]]).filter(v => v > 0 && isFinite(v));
+  const lx0 = Math.log10(Math.min(...hs)) - 0.05, lx1 = Math.log10(Math.max(...hs)) + 0.05;
+  const ly0 = Math.floor(Math.log10(Math.min(...es))), ly1 = Math.ceil(Math.log10(Math.max(...es)));
+  const X = v => m.l + (Math.log10(v) - lx0) / (lx1 - lx0) * (W - m.l - m.r);
+  const Y = v => H - m.b - (Math.log10(v) - ly0) / (ly1 - ly0) * (H - m.t - m.b);
+  let s = '<svg class="grafico" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gráfico log-log de errores versus h en cada instante">';
+  for (let k = ly0; k <= ly1; k++) {
+    const y = Y(Math.pow(10, k));
+    s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + y + '" y2="' + y + '" stroke="#e3e8ed"/>' +
+         '<text x="' + (m.l - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="12" font-family="Fira Sans" fill="#5E6A75">10<tspan dy="-6" font-size="9">' + k + '</tspan></text>';
+  }
+  [...new Set(hs)].forEach(h => {
+    const x = X(h);
+    s += '<line x1="' + x + '" x2="' + x + '" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="#f0f3f6"/>' +
+         '<text x="' + x + '" y="' + (H - m.b + 16) + '" text-anchor="middle" font-size="11" font-family="Fira Sans" fill="#5E6A75">' + fmt(h, 3) + '</text>';
+  });
+  s += '<rect x="' + m.l + '" y="' + m.t + '" width="' + (W - m.l - m.r) + '" height="' + (H - m.t - m.b) + '" fill="none" stroke="#50677D"/>';
+  s += '<text x="' + ((W + m.l) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="13" font-family="KaTeX_Math, serif" font-style="italic">h</text>';
+  const serie = (fs, idx, color, guiones) => {
+    const pts = fs.filter(f => f[idx] > 0 && isFinite(f[idx]));
+    return '<polyline points="' + pts.map(f => X(f[0]).toFixed(1) + ',' + Y(f[idx]).toFixed(1)).join(' ') + '" fill="none" stroke="' + color +
+      '" stroke-width="2"' + (guiones ? ' stroke-dasharray="6 3"' : '') + '/>' +
+      pts.map(f => '<circle cx="' + X(f[0]) + '" cy="' + Y(f[idx]) + '" r="3.2" fill="#fff" stroke="' + color + '" stroke-width="1.8"/>').join('');
+  };
+  grupos.forEach((g, k) => { s += serie(g.filas, 4, TONOS_H1[k % 3], true) + serie(g.filas, 2, TONOS_L2[k % 3], false); });
+  // pendientes de referencia h y h^2 ancladas al último grupo
+  const g = grupos[grupos.length - 1], pri = g.filas[0], ult = g.filas[g.filas.length - 1];
+  const ref = (p, e, dy, etiqueta) => {
+    const y0 = e * Math.pow(pri[0] / ult[0], p) * dy, y1 = e * dy;
+    return '<line x1="' + X(pri[0]) + '" y1="' + Y(y0) + '" x2="' + X(ult[0]) + '" y2="' + Y(y1) + '" stroke="#9aa4ae" stroke-dasharray="2 4" stroke-width="1.5"/>' +
+           '<text x="' + (X(pri[0]) - 4) + '" y="' + (Y(y0) + (dy < 1 ? 16 : -8)) + '" text-anchor="end" font-size="11" font-family="Fira Sans" fill="#5E6A75">' + etiqueta + '</text>';
+  };
+  s += ref(2, ult[2], 0.45, 'pendiente 2') + ref(1, ult[4], 1.8, 'pendiente 1');
+  return s + '</svg>';
+}
+
+/* =====================================================================
+   Matemáticas (KaTeX), índice activo y ejecución automática opcional
+   ===================================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
+      throwOnError: false
+    });
+  }
+  const enlaces = [...document.querySelectorAll('.indice a')];
+  const obs = new IntersectionObserver(entradas => {
+    entradas.forEach(en => {
+      if (en.isIntersecting) enlaces.forEach(a => a.classList.toggle('activo', a.getAttribute('href') === '#' + en.target.id));
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  enlaces.forEach(a => { const s = document.querySelector(a.getAttribute('href')); if (s) obs.observe(s); });
+  // Pantalla completa (útil para proyectar la página en clases)
+  const btnPantalla = document.getElementById('btn-pantalla');
+  const raiz = document.documentElement;
+  const pedirPantalla = raiz.requestFullscreen || raiz.webkitRequestFullscreen;
+  const salirPantalla = document.exitFullscreen || document.webkitExitFullscreen;
+  const enPantalla = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (!pedirPantalla) btnPantalla.hidden = true;     // p. ej., Safari en iPhone
+  btnPantalla.addEventListener('click', () => {
+    const p = enPantalla() ? salirPantalla.call(document) : pedirPantalla.call(raiz);
+    if (p && p.catch) p.catch(() => {});
+  });
+  const actualizarPantalla = () => {
+    const on = enPantalla();
+    raiz.classList.toggle('en-pantalla', on);
+    btnPantalla.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Ver en pantalla completa');
+    btnPantalla.title = on ? 'Salir de pantalla completa' : 'Pantalla completa';
+  };
+  document.addEventListener('fullscreenchange', actualizarPantalla);
+  document.addEventListener('webkitfullscreenchange', actualizarPantalla);
+  if (location.hash === '#autorun') ejecutar();
+});
+</script>
+</body>
+</html>
